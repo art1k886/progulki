@@ -9,14 +9,13 @@
     <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 
     <script>
-        // ГЛОБАЛЬНЫЙ КОНФИГ (встроен прямо в HTML)
         window.appConfig = {
             sensors: {
-                useAccelerometer: true,
+                useAccelerometer: false,
                 motionThreshold: 0.5,
                 gpsMinDistanceMeter: 0.2,
-                gpsMaxAccuracyMeter: 30,
-                smoothAlpha: 0.8
+                gpsMaxAccuracyMeter: 50,
+                smoothAlpha: 1.0
             },
             ui: {
                 theme: 'dark',
@@ -133,6 +132,23 @@
             align-items: center;
             justify-content: center;
             border-radius: 4px;
+        }
+
+        .btn-delete {
+            background: transparent;
+            border: none;
+            color: var(--danger-color);
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-delete:hover {
+            background-color: rgba(229, 57, 53, 0.1);
         }
 
         .btn-primary {
@@ -262,13 +278,21 @@
             background-color: var(--bg-secondary);
             border: 1px solid var(--border-color);
             padding: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             cursor: pointer;
+        }
+
+        .walk-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .walk-date {
             font-size: 14px;
             font-weight: 600;
-            margin-bottom: 8px;
         }
 
         .walk-metrics {
@@ -483,8 +507,8 @@
                 <div class="setting-row">
                     <span class="setting-label">Фильтр стола (Акселерометр)</span>
                     <select class="setting-select" id="setting-accel" onchange="window.app.updateConfig('sensors.useAccelerometer', this.value === 'true')">
+                        <option value="false">Выключен (Для улицы и помещений)</option>
                         <option value="true">Включен (Блокирует дрейф)</option>
-                        <option value="false">Выключен</option>
                     </select>
                 </div>
                 <div class="setting-row">
@@ -537,7 +561,7 @@
                 </div>
                 <div class="metric-group">
                     <span class="metric-label">Статус</span>
-                    <span class="metric-value" id="live-status">Ожидание</span>
+                    <span class="metric-value" id="live-status">Поиск GPS...</span>
                 </div>
                 <div class="metric-group">
                     <span class="metric-label">Точность GPS</span>
@@ -582,10 +606,6 @@
             </div>
 
             <div class="timeline-controls">
-                <button class="btn-icon" id="btn-timelapse" onclick="window.app.toggleTimelapse()" style="border: 1px solid var(--border-color);">
-                    <svg id="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                    <svg id="icon-pause" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
-                </button>
                 <div class="slider-container">
                     <input type="range" id="timeline-slider" min="0" max="100" value="100" oninput="window.app.onTimelineInput(this.value)">
                 </div>
@@ -610,7 +630,7 @@
                 this.trackingMap = null;
                 this.selectedWalk = null;
 
-                this.isMoving = false;
+                this.isMoving = true;
                 this.lastFilteredPos = null;
                 this.activeLayer = this.cfg.ui.defaultLayer || 'osm';
 
@@ -630,6 +650,15 @@
 
             saveWalks() {
                 localStorage.setItem(this.storageKey, JSON.stringify(this.walks));
+            }
+
+            deleteWalk(id, event) {
+                if (event) event.stopPropagation();
+                if (confirm('Удалить эту прогулку?')) {
+                    this.walks = this.walks.filter(w => w.id !== id);
+                    this.saveWalks();
+                    this.renderHistory();
+                }
             }
 
             updateConfig(path, value) {
@@ -662,7 +691,6 @@
                             this.isMoving = true;
                             return;
                         }
-
                         const acc = evt.acceleration;
                         if (acc && acc.x !== null) {
                             const magnitude = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
@@ -790,13 +818,13 @@
 
             requestAndStartTracking() {
                 if (!navigator.geolocation) {
-                    alert('Геолокация не поддерживается.');
+                    alert('Геолокация не поддерживается устройством.');
                     return;
                 }
 
                 navigator.geolocation.getCurrentPosition(
                     (pos) => this.startTracking(pos),
-                    (err) => alert('Включите доступ к GPS.'),
+                    (err) => alert('Разрешите доступ к геолокации в настройках браузера/телефона.'),
                     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
             }
@@ -823,16 +851,21 @@
                 const accuracy = pos.coords.accuracy;
                 document.getElementById('live-accuracy').innerText = `±${Math.round(accuracy)}м`;
 
-                if (accuracy > this.cfg.sensors.gpsMaxAccuracyMeter) return;
-
                 const statusEl = document.getElementById('live-status');
+
+                if (accuracy > this.cfg.sensors.gpsMaxAccuracyMeter) {
+                    statusEl.innerText = 'Слабый GPS';
+                    statusEl.style.color = '#ff9800';
+                    return;
+                }
+
                 if (this.cfg.sensors.useAccelerometer && !this.isMoving) {
-                    statusEl.innerText = 'Покой (Стол)';
+                    statusEl.innerText = 'Покой';
                     statusEl.style.color = 'var(--text-secondary)';
                     return;
                 }
 
-                statusEl.innerText = 'Движение';
+                statusEl.innerText = 'Запись...';
                 statusEl.style.color = '#4caf50';
 
                 const rawLat = pos.coords.latitude;
@@ -905,7 +938,7 @@
                 clearInterval(this.timerInterval);
 
                 if (this.currentTrack.length < 2) {
-                    alert('Недостаточно данных для сохранения маршрута.');
+                    alert('Недостаточно данных для сохранения маршрута (GPS не зафиксировал движение).');
                     this.showScreen('screen-menu');
                     return;
                 }
@@ -944,23 +977,28 @@
                     el.className = 'walk-item';
 
                     const start = new Date(walk.startTime);
-                    const dateStr = start.toLocaleDateString('ru-RU');
+                    const dateStr = start.toLocaleDateString('ru-RU') + ' ' + start.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                     const distStr = walk.distance >= 1000 
                         ? `${(walk.distance / 1000).toFixed(2)} км` 
                         : `${Math.round(walk.distance)} м`;
 
                     el.innerHTML = `
-                        <div class="walk-date">${dateStr}</div>
-                        <div class="walk-metrics">
-                            <div class="metric-group">
-                                <span class="metric-label">Дистанция</span>
-                                <span class="metric-value">${distStr}</span>
-                            </div>
-                            <div class="metric-group">
-                                <span class="metric-label">Ср. Скорость</span>
-                                <span class="metric-value">${walk.avgSpeed} км/ч</span>
+                        <div class="walk-info">
+                            <div class="walk-date">${dateStr}</div>
+                            <div class="walk-metrics">
+                                <div class="metric-group">
+                                    <span class="metric-label">Дистанция</span>
+                                    <span class="metric-value">${distStr}</span>
+                                </div>
+                                <div class="metric-group">
+                                    <span class="metric-label">Ср. Скорость</span>
+                                    <span class="metric-value">${walk.avgSpeed} км/ч</span>
+                                </div>
                             </div>
                         </div>
+                        <button class="btn-delete" title="Удалить" onclick="window.app.deleteWalk('${walk.id}', event)">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
                     `;
 
                     el.onclick = () => this.openWalkOnMap(walk.id);
@@ -1033,6 +1071,10 @@
                 this.map.fitBounds(bounds, { padding: 50, animate: false });
 
                 this.updateMapRoute(this.selectedWalk.track.length - 1);
+            }
+
+            onTimelineInput(val) {
+                this.updateMapRoute(val);
             }
 
             updateMapRoute(index) {
