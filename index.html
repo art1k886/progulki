@@ -12,9 +12,9 @@
         window.appConfig = {
             sensors: {
                 useAccelerometer: false,
-                gpsMinDistanceMeter: 3.0,     // Игнорируем мелкие отскоки GPS на месте (< 3 метров)
-                gpsMaxAccuracyMeter: 20.0,    // Отбрасываем неточные точки (> 20 метров погрешности)
-                smoothAlpha: 0.25             // Коэффициент сглаживания (чем меньше, тем глаже линия)
+                gpsMinDistanceMeter: 1.5,
+                gpsMaxAccuracyMeter: 45.0,
+                smoothAlpha: 0.35
             },
             ui: {
                 theme: 'dark',
@@ -451,6 +451,33 @@
         body.theme-light .monochrome-map .maplibregl-canvas {
             filter: grayscale(100%) contrast(110%);
         }
+
+        .user-location-marker {
+            width: 20px;
+            height: 20px;
+            background-color: #007aff;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,122,255,0.8);
+            position: relative;
+        }
+
+        .user-location-marker::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background-color: rgba(0, 122, 255, 0.3);
+            animation: user-pulse 2s infinite ease-out;
+        }
+
+        @keyframes user-pulse {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -501,19 +528,19 @@
                 <div class="setting-row">
                     <span class="setting-label">Плавность треков (Alpha)</span>
                     <select class="setting-select" id="setting-smooth" onchange="window.app.updateConfig('sensors.smoothAlpha', parseFloat(this.value))">
-                        <option value="0.15">Максимальная гладкость (0.15)</option>
-                        <option value="0.25" selected>Оптимальное сглаживание (0.25)</option>
-                        <option value="0.5">Среднее сглаживание (0.5)</option>
+                        <option value="0.2">Высокая гладкость (0.2)</option>
+                        <option value="0.35" selected>Оптимальное сглаживание (0.35)</option>
+                        <option value="0.6">Минимальное сглаживание (0.6)</option>
                         <option value="1.0">Без сглаживания (Сырой GPS)</option>
                     </select>
                 </div>
                 <div class="setting-row">
                     <span class="setting-label">Мин. шаг записи (метры)</span>
-                    <input type="number" class="setting-input" id="setting-min-dist" step="0.5" value="3.0" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMinDistanceMeter', parseFloat(this.value))">
+                    <input type="number" class="setting-input" id="setting-min-dist" step="0.5" value="1.5" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMinDistanceMeter', parseFloat(this.value))">
                 </div>
                 <div class="setting-row">
                     <span class="setting-label">Макс. погрешность GPS (м)</span>
-                    <input type="number" class="setting-input" id="setting-max-acc" step="1" value="20" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMaxAccuracyMeter', parseFloat(this.value))">
+                    <input type="number" class="setting-input" id="setting-max-acc" step="1" value="45" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMaxAccuracyMeter', parseFloat(this.value))">
                 </div>
             </div>
         </div>
@@ -620,6 +647,7 @@
 
                 this.map = null;
                 this.trackingMap = null;
+                this.liveMarker = null;
                 this.selectedWalk = null;
 
                 this.lastFilteredPos = null;
@@ -671,7 +699,7 @@
                 if (themeSelect) themeSelect.value = theme;
 
                 if (this.map) this.applyLayerToMap(this.map, 'map-container', this.activeLayer, 'btn-layer', 'route-layer', 'point-layer');
-                if (this.trackingMap) this.applyLayerToMap(this.trackingMap, 'tracking-map-container', this.activeLayer, 'btn-tr-layer', 'live-route-layer', 'live-point-layer');
+                if (this.trackingMap) this.applyLayerToMap(this.trackingMap, 'tracking-map-container', this.activeLayer, 'btn-tr-layer', 'live-route-layer');
             }
 
             changeTheme(val) {
@@ -778,13 +806,11 @@
                         paint: { 'line-color': '#ffffff', 'line-width': this.cfg.tracks.lineWidth }
                     });
 
-                    this.trackingMap.addSource('live-point-source', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [0, 0] } } });
-                    this.trackingMap.addLayer({
-                        id: 'live-point-layer',
-                        type: 'circle',
-                        source: 'live-point-source',
-                        paint: { 'circle-radius': 8, 'circle-color': '#ffffff', 'circle-stroke-width': 3, 'circle-stroke-color': '#000000' }
-                    });
+                    const el = document.createElement('div');
+                    el.className = 'user-location-marker';
+                    this.liveMarker = new maplibregl.Marker({ element: el })
+                        .setLngLat([0, 0])
+                        .addTo(this.trackingMap);
                 });
             }
 
@@ -797,7 +823,7 @@
                 navigator.geolocation.getCurrentPosition(
                     (pos) => this.startTracking(pos),
                     (err) => alert('Разрешите доступ к геолокации в настройках браузера.'),
-                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             }
 
@@ -825,7 +851,6 @@
 
                 const statusEl = document.getElementById('live-status');
 
-                // Игнорируем слишком неточные точки
                 if (accuracy > this.cfg.sensors.gpsMaxAccuracyMeter) {
                     statusEl.innerText = 'Слабый GPS';
                     statusEl.style.color = '#ff9800';
@@ -839,7 +864,6 @@
                 const rawLng = pos.coords.longitude;
                 const timestamp = new Date().getTime();
 
-                // Первая точка трека
                 if (!this.lastFilteredPos) {
                     this.lastFilteredPos = { lat: rawLat, lng: rawLng };
                     this.currentTrack.push({ lat: rawLat, lng: rawLng, timestamp });
@@ -847,13 +871,10 @@
                     return;
                 }
 
-                // Проверка расстояния от предыдущей зафиксированной точки
                 const distFromLast = this.haversineDistance(this.lastFilteredPos, { lat: rawLat, lng: rawLng });
 
-                // Игнорируем дрейф на месте
                 if (distFromLast < this.cfg.sensors.gpsMinDistanceMeter) return;
 
-                // Экспоненциальное сглаживание (EMA) для устранения резких углов
                 const alpha = this.cfg.sensors.smoothAlpha;
                 const smoothLat = this.lastFilteredPos.lat + alpha * (rawLat - this.lastFilteredPos.lat);
                 const smoothLng = this.lastFilteredPos.lng + alpha * (rawLng - this.lastFilteredPos.lng);
@@ -878,16 +899,11 @@
                     });
                 }
 
-                if (this.trackingMap.getSource('live-point-source')) {
-                    this.trackingMap.getSource('live-point-source').setData({
-                        type: 'Feature',
-                        geometry: { type: 'Point', coordinates: lastCoord }
-                    });
+                if (this.liveMarker) {
+                    this.liveMarker.setLngLat(lastCoord);
                 }
 
-                requestAnimationFrame(() => {
-                    this.trackingMap.easeTo({ center: lastCoord, zoom: 17.5, duration: 300 });
-                });
+                this.trackingMap.easeTo({ center: lastCoord, zoom: 17.5, duration: 300 });
             }
 
             updateTimer() {
@@ -909,7 +925,7 @@
                 clearInterval(this.timerInterval);
 
                 if (this.currentTrack.length < 2) {
-                    alert('Недостаточно данных для сохранения. Пройдите чуть больше времени/расстояния.');
+                    alert('Недостаточно точек для записи трека.');
                     this.showScreen('screen-menu');
                     return;
                 }
@@ -982,7 +998,7 @@
             }
 
             setTrackingMapLayer(layerType) {
-                this.applyLayerToMap(this.trackingMap, 'tracking-map-container', layerType, 'btn-tr-layer', 'live-route-layer', 'live-point-layer');
+                this.applyLayerToMap(this.trackingMap, 'tracking-map-container', layerType, 'btn-tr-layer', 'live-route-layer');
             }
 
             applyLayerToMap(mapInstance, containerId, layerType, btnPrefix, routeLayerId, pointLayerId) {
@@ -1012,7 +1028,7 @@
                 if (mapInstance.getLayer(routeLayerId)) {
                     mapInstance.setPaintProperty(routeLayerId, 'line-color', palette.line);
                 }
-                if (mapInstance.getLayer(pointLayerId)) {
+                if (pointLayerId && mapInstance.getLayer(pointLayerId)) {
                     mapInstance.setPaintProperty(pointLayerId, 'circle-color', palette.point);
                     mapInstance.setPaintProperty(pointLayerId, 'circle-stroke-color', palette.stroke);
                 }
