@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Path / Track Premium</title>
+    <title>Path / Track Precision</title>
 
+    <!-- MapLibre GL JS -->
     <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 
@@ -38,7 +39,6 @@
             user-select: none;
         }
 
-        /* Оптимизация для 60/120 FPS */
         .app-screen {
             position: absolute;
             top: 0;
@@ -248,8 +248,7 @@
             margin-top: 40px;
         }
 
-        /* Карта в реальном времени при трекинге */
-        #tracking-map-container {
+        #tracking-map-container, #map-container {
             width: 100%;
             height: 100%;
             position: absolute;
@@ -258,7 +257,7 @@
             z-index: 1;
         }
 
-        .tracking-overlay-top {
+        .overlay-top {
             position: absolute;
             top: 16px;
             left: 16px;
@@ -270,6 +269,10 @@
             pointer-events: none;
         }
 
+        .overlay-top > * {
+            pointer-events: auto;
+        }
+
         .tracking-badge {
             background-color: var(--bg-secondary);
             border: 1px solid var(--border-color);
@@ -277,7 +280,6 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            pointer-events: auto;
         }
 
         .pulse-indicator {
@@ -301,7 +303,7 @@
             font-variant-numeric: tabular-nums;
         }
 
-        .tracking-overlay-bottom {
+        .overlay-bottom {
             position: absolute;
             bottom: 24px;
             left: 16px;
@@ -318,30 +320,6 @@
         .live-metrics {
             display: flex;
             justify-content: space-around;
-        }
-
-        #map-container {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-
-        .map-overlay-top {
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            right: 16px;
-            z-index: 10;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
-        }
-
-        .map-overlay-top > * {
-            pointer-events: auto;
         }
 
         .map-controls-group {
@@ -368,20 +346,6 @@
         .layer-btn.active {
             color: var(--bg-primary);
             background-color: var(--text-primary);
-        }
-
-        .map-overlay-bottom {
-            position: absolute;
-            bottom: 24px;
-            left: 16px;
-            right: 16px;
-            z-index: 10;
-            background-color: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
         }
 
         .timeline-controls {
@@ -475,7 +439,6 @@
             margin-top: 8px;
         }
 
-        /* Ч/Б стиль карты OSM */
         .monochrome-map .maplibregl-canvas {
             filter: grayscale(100%) invert(90%) contrast(120%);
         }
@@ -483,10 +446,11 @@
 </head>
 <body>
 
+    <!-- МЕНЮ -->
     <section id="screen-menu" class="app-screen active">
         <div class="brand-logo">
             <div class="brand-title">PATH / TRACK</div>
-            <div class="brand-subtitle">Автономный Навигатор</div>
+            <div class="brand-subtitle">Точный Навигатор</div>
         </div>
         <div class="menu-container">
             <button class="btn-primary" onclick="app.requestAndStartTracking()">
@@ -495,11 +459,12 @@
             </button>
             <button class="btn-secondary" onclick="app.showScreen('screen-history')">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                Предыдущие
+                История
             </button>
         </div>
     </section>
 
+    <!-- ИСТОРИЯ -->
     <section id="screen-history" class="app-screen">
         <div class="header">
             <button class="btn-icon" onclick="app.showScreen('screen-menu')">
@@ -511,10 +476,11 @@
         <div class="walk-list" id="history-container"></div>
     </section>
 
+    <!-- РЕЖИМ ЗАПИСИ И КАРТА -->
     <section id="screen-tracking" class="app-screen">
         <div id="tracking-map-container"></div>
 
-        <div class="tracking-overlay-top">
+        <div class="overlay-top">
             <div class="tracking-badge">
                 <div class="pulse-indicator"></div>
                 <div class="tracking-timer" id="tracking-timer">00:00:00</div>
@@ -526,7 +492,7 @@
             </div>
         </div>
 
-        <div class="tracking-overlay-bottom">
+        <div class="overlay-bottom">
             <div class="live-metrics">
                 <div class="metric-group">
                     <span class="metric-label">Дистанция</span>
@@ -537,21 +503,22 @@
                     <span class="metric-value" id="live-speed">0.0 км/ч</span>
                 </div>
                 <div class="metric-group">
-                    <span class="metric-label">Точек GPS</span>
-                    <span class="metric-value" id="live-points">0</span>
+                    <span class="metric-label">Точность GPS</span>
+                    <span class="metric-value" id="live-accuracy">±0м</span>
                 </div>
             </div>
             <button class="btn-primary" style="border-color: var(--danger-color); background-color: var(--danger-color); color: #fff;" onclick="app.stopTracking()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"></rect></svg>
-                Завершить Прогулку
+                Завершить
             </button>
         </div>
     </section>
 
+    <!-- ЭКРАН ПРОСМОТРА -->
     <section id="screen-map" class="app-screen">
         <div id="map-container"></div>
 
-        <div class="map-overlay-top">
+        <div class="overlay-top">
             <button class="btn-icon" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);" onclick="app.showScreen('screen-history')">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
@@ -562,7 +529,7 @@
             </div>
         </div>
 
-        <div class="map-overlay-bottom">
+        <div class="overlay-bottom">
             <div class="walk-metrics" style="justify-content: space-between;">
                 <div class="metric-group">
                     <span class="metric-label" id="map-date-label">Дата</span>
@@ -591,10 +558,11 @@
         </div>
     </section>
 
+    <!-- МОДАЛКА УДАЛЕНИЯ -->
     <div class="modal-backdrop" id="modal-delete">
         <div class="modal-box">
             <div class="modal-title">Удаление Записи</div>
-            <div class="modal-desc">Вы действительно хотите удалить эту прогулку? Это действие нельзя отменить.</div>
+            <div class="modal-desc">Удалить эту прогулку?</div>
             <div class="modal-actions">
                 <button class="btn-secondary" onclick="app.closeDeleteModal()">Отмена</button>
                 <button class="btn-primary" style="background-color: var(--danger-color); border-color: var(--danger-color); color: #fff;" onclick="app.confirmDelete()">Удалить</button>
@@ -624,6 +592,15 @@
                 this.itemToDeleteId = null;
                 this.longPressTimer = null;
 
+                // Цвета линий под разные карты (чтобы не сливались)
+                this.themeColors = {
+                    osm: { line: '#ffffff', stroke: '#000000', point: '#ffffff' },
+                    topo: { line: '#e63946', stroke: '#ffffff', point: '#e63946' },
+                    sat: { line: '#00f0ff', stroke: '#000000', point: '#00f0ff' }
+                };
+
+                this.lastFilteredPos = null;
+
                 this.initMaps();
             }
 
@@ -650,7 +627,6 @@
                 }
             }
 
-            // Источники карт Google без API + OpenStreetMap
             getMapStyleSources() {
                 return {
                     'osm-tiles': {
@@ -683,14 +659,10 @@
             }
 
             initMaps() {
-                // 1. Карта просмотра маршрутов
+                // 1. Карта просмотра
                 this.map = new maplibregl.Map({
                     container: 'map-container',
-                    style: {
-                        version: 8,
-                        sources: this.getMapStyleSources(),
-                        layers: this.getMapStyleLayers()
-                    },
+                    style: { version: 8, sources: this.getMapStyleSources(), layers: this.getMapStyleLayers() },
                     center: [30.5234, 50.4501],
                     zoom: 12
                 });
@@ -701,6 +673,17 @@
                         type: 'geojson',
                         data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
                     });
+                    
+                    // Обводка для контраста
+                    this.map.addLayer({
+                        id: 'route-layer-outline',
+                        type: 'line',
+                        source: 'route-source',
+                        layout: { 'line-join': 'round', 'line-cap': 'round' },
+                        paint: { 'line-color': '#000000', 'line-width': 7 }
+                    });
+
+                    // Основная линия
                     this.map.addLayer({
                         id: 'route-layer',
                         type: 'line',
@@ -708,6 +691,7 @@
                         layout: { 'line-join': 'round', 'line-cap': 'round' },
                         paint: { 'line-color': '#ffffff', 'line-width': 4 }
                     });
+
                     this.map.addSource('point-source', {
                         type: 'geojson',
                         data: { type: 'Feature', geometry: { type: 'Point', coordinates: [0, 0] } }
@@ -717,24 +701,20 @@
                         type: 'circle',
                         source: 'point-source',
                         paint: {
-                            'circle-radius': 6,
+                            'circle-radius': 7,
                             'circle-color': '#ffffff',
-                            'circle-stroke-width': 2,
-                            'circle-stroke-color': '#0a0a0a'
+                            'circle-stroke-width': 3,
+                            'circle-stroke-color': '#000000'
                         }
                     });
                 });
 
-                // 2. Карта для отслеживания в реальном времени
+                // 2. Карта отслеживания
                 this.trackingMap = new maplibregl.Map({
                     container: 'tracking-map-container',
-                    style: {
-                        version: 8,
-                        sources: this.getMapStyleSources(),
-                        layers: this.getMapStyleLayers()
-                    },
+                    style: { version: 8, sources: this.getMapStyleSources(), layers: this.getMapStyleLayers() },
                     center: [30.5234, 50.4501],
-                    zoom: 16
+                    zoom: 17
                 });
                 document.getElementById('tracking-map-container').classList.add('monochrome-map');
 
@@ -743,6 +723,15 @@
                         type: 'geojson',
                         data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
                     });
+
+                    this.trackingMap.addLayer({
+                        id: 'live-route-layer-outline',
+                        type: 'line',
+                        source: 'live-route-source',
+                        layout: { 'line-join': 'round', 'line-cap': 'round' },
+                        paint: { 'line-color': '#000000', 'line-width': 8 }
+                    });
+
                     this.trackingMap.addLayer({
                         id: 'live-route-layer',
                         type: 'line',
@@ -750,10 +739,12 @@
                         layout: { 'line-join': 'round', 'line-cap': 'round' },
                         paint: { 'line-color': '#ffffff', 'line-width': 5 }
                     });
+
                     this.trackingMap.addSource('live-point-source', {
                         type: 'geojson',
                         data: { type: 'Feature', geometry: { type: 'Point', coordinates: [0, 0] } }
                     });
+
                     this.trackingMap.addLayer({
                         id: 'live-point-layer',
                         type: 'circle',
@@ -762,7 +753,7 @@
                             'circle-radius': 8,
                             'circle-color': '#ffffff',
                             'circle-stroke-width': 3,
-                            'circle-stroke-color': '#e53935'
+                            'circle-stroke-color': '#000000'
                         }
                     });
                 });
@@ -770,27 +761,20 @@
 
             requestAndStartTracking() {
                 if (!navigator.geolocation) {
-                    alert('Геолокация не поддерживается вашим браузером.');
+                    alert('Геолокация не поддерживается вашим устройством.');
                     return;
                 }
 
                 navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        this.startTracking(pos);
-                    },
-                    (err) => {
-                        let msg = 'Не удалось получить доступ к геолокации.';
-                        if (err.code === err.PERMISSION_DENIED) {
-                            msg = 'Доступ к геолокации отклонен.';
-                        }
-                        alert(msg);
-                    },
+                    (pos) => this.startTracking(pos),
+                    (err) => alert('Ошибка доступа к геолокации. Включите GPS.'),
                     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
             }
 
             startTracking(initialPos) {
                 this.currentTrack = [];
+                this.lastFilteredPos = null;
                 this.startTime = new Date();
 
                 this.showScreen('screen-tracking');
@@ -803,24 +787,44 @@
 
                 this.watchId = navigator.geolocation.watchPosition(
                     (pos) => this.onLocationUpdate(pos),
-                    (err) => console.warn('Ошибка геолокации:', err),
-                    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+                    (err) => console.warn('Ошибка GPS:', err),
+                    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
                 );
             }
 
+            /* ВАЖНО: Математическая фильтрация шума и прыжков GPS */
             onLocationUpdate(pos) {
-                const point = {
-                    lat: pos.coords.latitude,
-                    lng: pos.coords.longitude,
-                    timestamp: new Date().getTime()
-                };
+                const accuracy = pos.coords.accuracy;
+                document.getElementById('live-accuracy').innerText = `±${Math.round(accuracy)}м`;
 
-                const lastPoint = this.currentTrack[this.currentTrack.length - 1];
-                if (lastPoint && lastPoint.lat === point.lat && lastPoint.lng === point.lng) {
+                // 1. Отсеиваем точки с высокой погрешностью (выше 20 метров)
+                if (accuracy > 20) return;
+
+                const rawLat = pos.coords.latitude;
+                const rawLng = pos.coords.longitude;
+                const timestamp = new Date().getTime();
+
+                if (!this.lastFilteredPos) {
+                    this.lastFilteredPos = { lat: rawLat, lng: rawLng };
+                    this.currentTrack.push({ lat: rawLat, lng: rawLng, timestamp });
+                    this.updateLiveMap();
                     return;
                 }
 
-                this.currentTrack.push(point);
+                // 2. Расчет расстояния от предыдущей точки
+                const distFromLast = this.haversineDistance(this.lastFilteredPos, { lat: rawLat, lng: rawLng });
+
+                // 3. Порог движения: игнорируем мелкие колебания меньше 1.8м (махи руками, покачивания)
+                if (distFromLast < 1.8) return;
+
+                // 4. Фильтр экспоненциального сглаживания (Exponential Smoothing) для идеальной линии
+                const alpha = 0.45; 
+                const smoothLat = this.lastFilteredPos.lat + alpha * (rawLat - this.lastFilteredPos.lat);
+                const smoothLng = this.lastFilteredPos.lng + alpha * (rawLng - this.lastFilteredPos.lng);
+
+                this.lastFilteredPos = { lat: smoothLat, lng: smoothLng };
+                this.currentTrack.push({ lat: smoothLat, lng: smoothLng, timestamp });
+
                 this.updateLiveMetrics();
                 this.updateLiveMap();
             }
@@ -831,7 +835,6 @@
                 const coords = this.currentTrack.map(p => [p.lng, p.lat]);
                 const lastCoord = coords[coords.length - 1];
 
-                // Обновляем линию трека
                 if (this.trackingMap.getSource('live-route-source')) {
                     this.trackingMap.getSource('live-route-source').setData({
                         type: 'Feature',
@@ -839,7 +842,6 @@
                     });
                 }
 
-                // Обновляем текущую позицию
                 if (this.trackingMap.getSource('live-point-source')) {
                     this.trackingMap.getSource('live-point-source').setData({
                         type: 'Feature',
@@ -847,12 +849,11 @@
                     });
                 }
 
-                // Плавное смещение карты за пользователем (60/120 FPS)
                 requestAnimationFrame(() => {
                     this.trackingMap.easeTo({
                         center: lastCoord,
-                        zoom: 17,
-                        duration: 800
+                        zoom: 17.5,
+                        duration: 600
                     });
                 });
             }
@@ -873,7 +874,6 @@
                 const durationHours = (new Date() - this.startTime) / 1000 / 3600;
                 const avgSpeed = durationHours > 0 ? (distKm / durationHours).toFixed(1) : '0.0';
                 document.getElementById('live-speed').innerText = `${avgSpeed} км/ч`;
-                document.getElementById('live-points').innerText = `${this.currentTrack.length}`;
             }
 
             stopTracking() {
@@ -881,7 +881,7 @@
                 clearInterval(this.timerInterval);
 
                 if (this.currentTrack.length === 0) {
-                    alert('Данные геолокации не были получены.');
+                    alert('Недостаточно точек для сохранения.');
                     this.showScreen('screen-menu');
                     return;
                 }
@@ -958,9 +958,7 @@
                         }, 700);
                     };
 
-                    const cancelPress = () => {
-                        clearTimeout(this.longPressTimer);
-                    };
+                    const cancelPress = () => clearTimeout(this.longPressTimer);
 
                     el.addEventListener('touchstart', startPress, {passive: true});
                     el.addEventListener('touchend', cancelPress);
@@ -992,14 +990,15 @@
             }
 
             setMapLayer(layerType) {
-                this.applyLayerToMap(this.map, 'map-container', layerType, 'btn-layer');
+                this.applyLayerToMap(this.map, 'map-container', layerType, 'btn-layer', 'route-layer', 'point-layer');
             }
 
             setTrackingMapLayer(layerType) {
-                this.applyLayerToMap(this.trackingMap, 'tracking-map-container', layerType, 'btn-tr-layer');
+                this.applyLayerToMap(this.trackingMap, 'tracking-map-container', layerType, 'btn-tr-layer', 'live-route-layer', 'live-point-layer');
             }
 
-            applyLayerToMap(mapInstance, containerId, layerType, btnPrefix) {
+            /* Динамическая смена цвета линии трека под тип карты */
+            applyLayerToMap(mapInstance, containerId, layerType, btnPrefix, routeLayerId, pointLayerId) {
                 if (!mapInstance) return;
 
                 document.querySelectorAll(`[id^="${btnPrefix}-"]`).forEach(b => b.classList.remove('active'));
@@ -1016,6 +1015,16 @@
                 ['osm', 'topo', 'sat'].forEach(l => {
                     mapInstance.setLayoutProperty(`layer-${l}`, 'visibility', l === layerType ? 'visible' : 'none');
                 });
+
+                // Настройка контрастных цветов
+                const theme = this.themeColors[layerType];
+                if (mapInstance.getLayer(routeLayerId)) {
+                    mapInstance.setPaintProperty(routeLayerId, 'line-color', theme.line);
+                }
+                if (mapInstance.getLayer(pointLayerId)) {
+                    mapInstance.setPaintProperty(pointLayerId, 'circle-color', theme.point);
+                    mapInstance.setPaintProperty(pointLayerId, 'circle-stroke-color', theme.stroke);
+                }
             }
 
             openWalkOnMap(walkId) {
@@ -1043,7 +1052,7 @@
                 const coordinates = this.selectedWalk.track.map(p => [p.lng, p.lat]);
                 
                 if (coordinates.length === 1) {
-                    this.map.flyTo({ center: coordinates[0], zoom: 16 });
+                    this.map.flyTo({ center: coordinates[0], zoom: 17 });
                 } else {
                     const bounds = coordinates.reduce((b, coord) => b.extend(coord), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
                     this.map.fitBounds(bounds, { padding: 50, animate: false });
@@ -1093,7 +1102,6 @@
                 }
             }
 
-            /* Анимация Таймлапса на 60 / 120 FPS через requestAnimationFrame */
             startTimelapse() {
                 const slider = document.getElementById('timeline-slider');
                 if (parseInt(slider.value) >= parseInt(slider.max)) {
@@ -1109,7 +1117,6 @@
                 const loop = (time) => {
                     if (!this.isTimelapsePlaying) return;
 
-                    // Обновляем кадр каждые 80мс независимо от частоты экрана
                     if (time - this.lastFrameTime > 80) {
                         let curr = parseInt(slider.value);
                         let max = parseInt(slider.max);
