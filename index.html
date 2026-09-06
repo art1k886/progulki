@@ -12,9 +12,9 @@
         window.appConfig = {
             sensors: {
                 useAccelerometer: false,
-                motionThreshold: 0.5,
-                gpsMinDistanceMeter: 0.2,
-                gpsMaxAccuracyMeter: 50,
+                motionThreshold: 0.1,
+                gpsMinDistanceMeter: 0.1,
+                gpsMaxAccuracyMeter: 100,
                 smoothAlpha: 1.0
             },
             ui: {
@@ -148,7 +148,7 @@
         }
 
         .btn-delete:hover {
-            background-color: rgba(229, 57, 53, 0.1);
+            background-color: rgba(229, 57, 53, 0.15);
         }
 
         .btn-primary {
@@ -505,23 +505,23 @@
             <div class="setting-group">
                 <div class="setting-title">Точность и Движение</div>
                 <div class="setting-row">
-                    <span class="setting-label">Фильтр стола (Акселерометр)</span>
+                    <span class="setting-label">Фильтр акселерометра</span>
                     <select class="setting-select" id="setting-accel" onchange="window.app.updateConfig('sensors.useAccelerometer', this.value === 'true')">
-                        <option value="false">Выключен (Для улицы и помещений)</option>
-                        <option value="true">Включен (Блокирует дрейф)</option>
+                        <option value="false">Выключен (Рекомендуется)</option>
+                        <option value="true">Включен</option>
                     </select>
                 </div>
                 <div class="setting-row">
                     <span class="setting-label">Плавность треков (Alpha)</span>
                     <select class="setting-select" id="setting-smooth" onchange="window.app.updateConfig('sensors.smoothAlpha', parseFloat(this.value))">
-                        <option value="1.0">Без сглаживания (1:1 Сырой GPS)</option>
-                        <option value="0.8">Высокая чувствительность (0.8)</option>
-                        <option value="0.4">Среднее сглаживание (0.4)</option>
+                        <option value="1.0">Без сглаживания (1:1 GPS)</option>
+                        <option value="0.8">Высокая точность (0.8)</option>
+                        <option value="0.4">Сглаживание (0.4)</option>
                     </select>
                 </div>
                 <div class="setting-row">
                     <span class="setting-label">Мин. шаг записи (метры)</span>
-                    <input type="number" class="setting-input" id="setting-min-dist" step="0.1" value="0.2" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMinDistanceMeter', parseFloat(this.value))">
+                    <input type="number" class="setting-input" id="setting-min-dist" step="0.1" value="0.1" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMinDistanceMeter', parseFloat(this.value))">
                 </div>
             </div>
         </div>
@@ -649,12 +649,16 @@
             }
 
             saveWalks() {
-                localStorage.setItem(this.storageKey, JSON.stringify(this.walks));
+                try {
+                    localStorage.setItem(this.storageKey, JSON.stringify(this.walks));
+                } catch (e) {
+                    console.error('Ошибка сохранения:', e);
+                }
             }
 
             deleteWalk(id, event) {
                 if (event) event.stopPropagation();
-                if (confirm('Удалить эту прогулку?')) {
+                if (confirm('Удалить эту прогулку из истории?')) {
                     this.walks = this.walks.filter(w => w.id !== id);
                     this.saveWalks();
                     this.renderHistory();
@@ -753,7 +757,6 @@
                     center: [30.5234, 50.4501],
                     zoom: 12
                 });
-                document.getElementById('map-container').classList.add('monochrome-map');
 
                 this.map.on('load', () => {
                     this.map.addSource('route-source', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
@@ -787,7 +790,6 @@
                     center: [30.5234, 50.4501],
                     zoom: 17
                 });
-                document.getElementById('tracking-map-container').classList.add('monochrome-map');
 
                 this.trackingMap.on('load', () => {
                     this.trackingMap.addSource('live-route-source', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
@@ -818,13 +820,13 @@
 
             requestAndStartTracking() {
                 if (!navigator.geolocation) {
-                    alert('Геолокация не поддерживается устройством.');
+                    alert('Геолокация не поддерживается вашим устройством.');
                     return;
                 }
 
                 navigator.geolocation.getCurrentPosition(
                     (pos) => this.startTracking(pos),
-                    (err) => alert('Разрешите доступ к геолокации в настройках браузера/телефона.'),
+                    (err) => alert('Разрешите доступ к геопозиции в настройках браузера или телефона.'),
                     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
             }
@@ -856,12 +858,6 @@
                 if (accuracy > this.cfg.sensors.gpsMaxAccuracyMeter) {
                     statusEl.innerText = 'Слабый GPS';
                     statusEl.style.color = '#ff9800';
-                    return;
-                }
-
-                if (this.cfg.sensors.useAccelerometer && !this.isMoving) {
-                    statusEl.innerText = 'Покой';
-                    statusEl.style.color = 'var(--text-secondary)';
                     return;
                 }
 
@@ -915,7 +911,7 @@
                 }
 
                 requestAnimationFrame(() => {
-                    this.trackingMap.easeTo({ center: lastCoord, zoom: 17.5, duration: 400 });
+                    this.trackingMap.easeTo({ center: lastCoord, zoom: 17.5, duration: 300 });
                 });
             }
 
@@ -938,7 +934,7 @@
                 clearInterval(this.timerInterval);
 
                 if (this.currentTrack.length < 2) {
-                    alert('Недостаточно данных для сохранения маршрута (GPS не зафиксировал движение).');
+                    alert('Недостаточно данных для сохранения. Пройдите чуть больше времени/расстояния.');
                     this.showScreen('screen-menu');
                     return;
                 }
@@ -1068,7 +1064,11 @@
 
                 const coordinates = this.selectedWalk.track.map(p => [p.lng, p.lat]);
                 const bounds = coordinates.reduce((b, coord) => b.extend(coord), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
-                this.map.fitBounds(bounds, { padding: 50, animate: false });
+                
+                setTimeout(() => {
+                    this.map.resize();
+                    this.map.fitBounds(bounds, { padding: 50, animate: false });
+                }, 200);
 
                 this.updateMapRoute(this.selectedWalk.track.length - 1);
             }
@@ -1091,10 +1091,17 @@
                 }
 
                 if (coords.length > 0 && this.map.getSource('point-source')) {
+                    const currentPoint = coords[coords.length - 1];
                     this.map.getSource('point-source').setData({
                         type: 'Feature',
-                        geometry: { type: 'Point', coordinates: coords[coords.length - 1] }
+                        geometry: { type: 'Point', coordinates: currentPoint }
                     });
+
+                    const pointObj = slicedTrack[slicedTrack.length - 1];
+                    if (pointObj && pointObj.timestamp) {
+                        const pointTime = new Date(pointObj.timestamp);
+                        document.getElementById('timeline-time').innerText = pointTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    }
                 }
             }
 
