@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Path / Track Precision</title>
+    <title>Path / Track Pro Precision</title>
 
-    <!-- MapLibre GL JS -->
     <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+    <script src="config.js"></script>
 
     <style>
         :root {
@@ -18,8 +19,20 @@
             --text-primary: #f5f5f5;
             --text-secondary: #a0a0a0;
             --danger-color: #e53935;
+            --accent-color: #ffffff;
             --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             --transition-speed: 0.2s;
+        }
+
+        /* Дневная тема */
+        body.theme-light {
+            --bg-primary: #f4f4f6;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e5e5ea;
+            --border-color: #d1d1d6;
+            --text-primary: #1c1c1e;
+            --text-secondary: #8e8e93;
+            --accent-color: #000000;
         }
 
         * {
@@ -37,6 +50,7 @@
             font-family: var(--font-family);
             overflow: hidden;
             user-select: none;
+            transition: background-color var(--transition-speed), color var(--transition-speed);
         }
 
         .app-screen {
@@ -123,7 +137,7 @@
 
         .btn-primary:active {
             transform: scale(0.97);
-            background-color: #cccccc;
+            opacity: 0.8;
         }
 
         .btn-secondary {
@@ -148,7 +162,6 @@
         .btn-secondary:active {
             transform: scale(0.97);
             background-color: var(--bg-tertiary);
-            border-color: var(--text-secondary);
         }
 
         #screen-menu {
@@ -185,6 +198,54 @@
             text-transform: uppercase;
         }
 
+        /* Настройки (Settings UI) */
+        .settings-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 16px;
+        }
+
+        .setting-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .setting-label {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .setting-select, .setting-input {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            font-size: 12px;
+            outline: none;
+        }
+
         .walk-list {
             flex: 1;
             overflow-y: auto;
@@ -205,15 +266,12 @@
 
         .walk-item:active {
             transform: scale(0.98);
-            border-color: var(--text-secondary);
         }
 
         .walk-date {
             font-size: 14px;
             font-weight: 600;
-            letter-spacing: 0.5px;
             margin-bottom: 8px;
-            color: var(--text-primary);
         }
 
         .walk-metrics {
@@ -237,15 +295,6 @@
             font-size: 13px;
             font-weight: 500;
             margin-top: 2px;
-        }
-
-        .empty-state {
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 13px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            margin-top: 40px;
         }
 
         #tracking-map-container, #map-container {
@@ -386,85 +435,83 @@
             text-align: right;
         }
 
-        .modal-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity var(--transition-speed);
-            will-change: opacity;
-        }
-
-        .modal-backdrop.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .modal-box {
-            background-color: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            padding: 24px;
-            width: 100%;
-            max-width: 360px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .modal-title {
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .modal-desc {
-            font-size: 12px;
-            color: var(--text-secondary);
-            line-height: 1.4;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 8px;
-        }
-
         .monochrome-map .maplibregl-canvas {
             filter: grayscale(100%) invert(90%) contrast(120%);
+        }
+        
+        body.theme-light .monochrome-map .maplibregl-canvas {
+            filter: grayscale(100%) contrast(110%);
         }
     </style>
 </head>
 <body>
 
-    <!-- МЕНЮ -->
     <section id="screen-menu" class="app-screen active">
         <div class="brand-logo">
             <div class="brand-title">PATH / TRACK</div>
-            <div class="brand-subtitle">Точный Навигатор</div>
+            <div class="brand-subtitle">Гибридный Навигатор</div>
         </div>
         <div class="menu-container">
             <button class="btn-primary" onclick="app.requestAndStartTracking()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                Начать
+                Начать Прогулку
             </button>
             <button class="btn-secondary" onclick="app.showScreen('screen-history')">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                 История
             </button>
+            <button class="btn-secondary" onclick="app.showScreen('screen-settings')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                Настройки
+            </button>
         </div>
     </section>
 
-    <!-- ИСТОРИЯ -->
+    <section id="screen-settings" class="app-screen">
+        <div class="header">
+            <button class="btn-icon" onclick="app.showScreen('screen-menu')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <div class="header-title">Параметры</div>
+            <div style="width: 40px;"></div>
+        </div>
+        <div class="settings-content">
+            <div class="setting-group">
+                <div class="setting-title">Интерфейс</div>
+                <div class="setting-row">
+                    <span class="setting-label">Тема оформления</span>
+                    <select class="setting-select" id="setting-theme" onchange="app.changeTheme(this.value)">
+                        <option value="dark">Темная (Ночь)</option>
+                        <option value="light">Светлая (День)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div class="setting-title">Точность и Движение</div>
+                <div class="setting-row">
+                    <span class="setting-label">Фильтр стола (Акселерометр)</span>
+                    <select class="setting-select" id="setting-accel" onchange="app.updateConfig('sensors.useAccelerometer', this.value === 'true')">
+                        <option value="true">Включен (Блокирует дрейф)</option>
+                        <option value="false">Выключен</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Плавность треков (Alpha)</span>
+                    <select class="setting-select" id="setting-smooth" onchange="app.updateConfig('sensors.smoothAlpha', parseFloat(this.value))">
+                        <option value="1.0">Без сглаживания (1:1 Сырой GPS)</option>
+                        <option value="0.8">Высокая чувствительность (0.8)</option>
+                        <option value="0.4">Среднее сглаживание (0.4)</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Мин. шаг записи (метры)</span>
+                    <input type="number" class="setting-input" id="setting-min-dist" step="0.1" value="0.2" style="width: 70px;" onchange="app.updateConfig('sensors.gpsMinDistanceMeter', parseFloat(this.value))">
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section id="screen-history" class="app-screen">
         <div class="header">
             <button class="btn-icon" onclick="app.showScreen('screen-menu')">
@@ -476,7 +523,6 @@
         <div class="walk-list" id="history-container"></div>
     </section>
 
-    <!-- РЕЖИМ ЗАПИСИ И КАРТА -->
     <section id="screen-tracking" class="app-screen">
         <div id="tracking-map-container"></div>
 
@@ -499,8 +545,8 @@
                     <span class="metric-value" id="live-distance">0.00 км</span>
                 </div>
                 <div class="metric-group">
-                    <span class="metric-label">Ср. Скорость</span>
-                    <span class="metric-value" id="live-speed">0.0 км/ч</span>
+                    <span class="metric-label">Статус</span>
+                    <span class="metric-value" id="live-status">Ожидание</span>
                 </div>
                 <div class="metric-group">
                     <span class="metric-label">Точность GPS</span>
@@ -514,7 +560,6 @@
         </div>
     </section>
 
-    <!-- ЭКРАН ПРОСМОТРА -->
     <section id="screen-map" class="app-screen">
         <div id="map-container"></div>
 
@@ -558,21 +603,10 @@
         </div>
     </section>
 
-    <!-- МОДАЛКА УДАЛЕНИЯ -->
-    <div class="modal-backdrop" id="modal-delete">
-        <div class="modal-box">
-            <div class="modal-title">Удаление Записи</div>
-            <div class="modal-desc">Удалить эту прогулку?</div>
-            <div class="modal-actions">
-                <button class="btn-secondary" onclick="app.closeDeleteModal()">Отмена</button>
-                <button class="btn-primary" style="background-color: var(--danger-color); border-color: var(--danger-color); color: #fff;" onclick="app.confirmDelete()">Удалить</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         class RouteTrackerApp {
             constructor() {
+                this.cfg = window.appConfig || {};
                 this.storageKey = 'path_tracker_walks';
                 this.walks = this.loadWalks();
                 
@@ -584,24 +618,14 @@
                 this.map = null;
                 this.trackingMap = null;
                 this.selectedWalk = null;
-                
-                this.timelapseFrame = null;
-                this.isTimelapsePlaying = false;
-                this.lastFrameTime = 0;
-                
-                this.itemToDeleteId = null;
-                this.longPressTimer = null;
 
-                // Цвета линий под разные карты (чтобы не сливались)
-                this.themeColors = {
-                    osm: { line: '#ffffff', stroke: '#000000', point: '#ffffff' },
-                    topo: { line: '#e63946', stroke: '#ffffff', point: '#e63946' },
-                    sat: { line: '#00f0ff', stroke: '#000000', point: '#00f0ff' }
-                };
-
+                this.isMoving = false;
                 this.lastFilteredPos = null;
+                this.activeLayer = this.cfg.ui?.defaultLayer || 'osm';
 
+                this.initSensors();
                 this.initMaps();
+                this.applyTheme(this.cfg.ui?.theme || 'dark');
             }
 
             loadWalks() {
@@ -611,6 +635,51 @@
 
             saveWalks() {
                 localStorage.setItem(this.storageKey, JSON.stringify(this.walks));
+            }
+
+            updateConfig(path, value) {
+                const keys = path.split('.');
+                let obj = this.cfg;
+                for (let i = 0; i < keys.length - 1; i++) {
+                    obj = obj[keys[i]];
+                }
+                obj[keys[keys.length - 1]] = value;
+            }
+
+            applyTheme(theme) {
+                this.cfg.ui.theme = theme;
+                document.body.className = theme === 'light' ? 'theme-light' : '';
+                document.getElementById('setting-theme').value = theme;
+                
+                if (this.map) this.applyLayerToMap(this.map, 'map-container', this.activeLayer, 'btn-layer', 'route-layer', 'point-layer');
+                if (this.trackingMap) this.applyLayerToMap(this.trackingMap, 'tracking-map-container', this.activeLayer, 'btn-tr-layer', 'live-route-layer', 'live-point-layer');
+            }
+
+            changeTheme(val) {
+                this.applyTheme(val);
+            }
+
+            /* Интеграция акселерометра для блокировки ложного GPS-дрейфа */
+            initSensors() {
+                if (window.DeviceMotionEvent) {
+                    window.addEventListener('devicemotion', (evt) => {
+                        if (!this.cfg.sensors.useAccelerometer) {
+                            this.isMoving = true;
+                            return;
+                        }
+
+                        const acc = evt.acceleration;
+                        if (acc && acc.x !== null) {
+                            const magnitude = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+                            // Если ускорение выше порога — телефон действительно двигают/машут
+                            this.isMoving = magnitude > this.cfg.sensors.motionThreshold;
+                        } else {
+                            this.isMoving = true;
+                        }
+                    });
+                } else {
+                    this.isMoving = true;
+                }
             }
 
             showScreen(screenId) {
@@ -632,20 +701,17 @@
                     'osm-tiles': {
                         type: 'raster',
                         tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                        tileSize: 256,
-                        attribution: '© OpenStreetMap'
+                        tileSize: 256
                     },
                     'google-topo-tiles': {
                         type: 'raster',
                         tiles: ['https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}'],
-                        tileSize: 256,
-                        attribution: '© Google Maps'
+                        tileSize: 256
                     },
                     'google-sat-tiles': {
                         type: 'raster',
                         tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'],
-                        tileSize: 256,
-                        attribution: '© Google Maps'
+                        tileSize: 256
                     }
                 };
             }
@@ -659,7 +725,6 @@
             }
 
             initMaps() {
-                // 1. Карта просмотра
                 this.map = new maplibregl.Map({
                     container: 'map-container',
                     style: { version: 8, sources: this.getMapStyleSources(), layers: this.getMapStyleLayers() },
@@ -669,47 +734,31 @@
                 document.getElementById('map-container').classList.add('monochrome-map');
 
                 this.map.on('load', () => {
-                    this.map.addSource('route-source', {
-                        type: 'geojson',
-                        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
-                    });
-                    
-                    // Обводка для контраста
+                    this.map.addSource('route-source', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
                     this.map.addLayer({
                         id: 'route-layer-outline',
                         type: 'line',
                         source: 'route-source',
                         layout: { 'line-join': 'round', 'line-cap': 'round' },
-                        paint: { 'line-color': '#000000', 'line-width': 7 }
+                        paint: { 'line-color': '#000000', 'line-width': this.cfg.tracks.lineOutlineWidth }
                     });
-
-                    // Основная линия
                     this.map.addLayer({
                         id: 'route-layer',
                         type: 'line',
                         source: 'route-source',
                         layout: { 'line-join': 'round', 'line-cap': 'round' },
-                        paint: { 'line-color': '#ffffff', 'line-width': 4 }
+                        paint: { 'line-color': '#ffffff', 'line-width': this.cfg.tracks.lineWidth }
                     });
 
-                    this.map.addSource('point-source', {
-                        type: 'geojson',
-                        data: { type: 'Feature', geometry: { type: 'Point', coordinates: [0, 0] } }
-                    });
+                    this.map.addSource('point-source', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [0, 0] } } });
                     this.map.addLayer({
                         id: 'point-layer',
                         type: 'circle',
                         source: 'point-source',
-                        paint: {
-                            'circle-radius': 7,
-                            'circle-color': '#ffffff',
-                            'circle-stroke-width': 3,
-                            'circle-stroke-color': '#000000'
-                        }
+                        paint: { 'circle-radius': 7, 'circle-color': '#ffffff', 'circle-stroke-width': 3, 'circle-stroke-color': '#000000' }
                     });
                 });
 
-                // 2. Карта отслеживания
                 this.trackingMap = new maplibregl.Map({
                     container: 'tracking-map-container',
                     style: { version: 8, sources: this.getMapStyleSources(), layers: this.getMapStyleLayers() },
@@ -719,55 +768,41 @@
                 document.getElementById('tracking-map-container').classList.add('monochrome-map');
 
                 this.trackingMap.on('load', () => {
-                    this.trackingMap.addSource('live-route-source', {
-                        type: 'geojson',
-                        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
-                    });
-
+                    this.trackingMap.addSource('live-route-source', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
                     this.trackingMap.addLayer({
                         id: 'live-route-layer-outline',
                         type: 'line',
                         source: 'live-route-source',
                         layout: { 'line-join': 'round', 'line-cap': 'round' },
-                        paint: { 'line-color': '#000000', 'line-width': 8 }
+                        paint: { 'line-color': '#000000', 'line-width': this.cfg.tracks.lineOutlineWidth }
                     });
-
                     this.trackingMap.addLayer({
                         id: 'live-route-layer',
                         type: 'line',
                         source: 'live-route-source',
                         layout: { 'line-join': 'round', 'line-cap': 'round' },
-                        paint: { 'line-color': '#ffffff', 'line-width': 5 }
+                        paint: { 'line-color': '#ffffff', 'line-width': this.cfg.tracks.lineWidth }
                     });
 
-                    this.trackingMap.addSource('live-point-source', {
-                        type: 'geojson',
-                        data: { type: 'Feature', geometry: { type: 'Point', coordinates: [0, 0] } }
-                    });
-
+                    this.trackingMap.addSource('live-point-source', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'Point', coordinates: [0, 0] } } });
                     this.trackingMap.addLayer({
                         id: 'live-point-layer',
                         type: 'circle',
                         source: 'live-point-source',
-                        paint: {
-                            'circle-radius': 8,
-                            'circle-color': '#ffffff',
-                            'circle-stroke-width': 3,
-                            'circle-stroke-color': '#000000'
-                        }
+                        paint: { 'circle-radius': 8, 'circle-color': '#ffffff', 'circle-stroke-width': 3, 'circle-stroke-color': '#000000' }
                     });
                 });
             }
 
             requestAndStartTracking() {
                 if (!navigator.geolocation) {
-                    alert('Геолокация не поддерживается вашим устройством.');
+                    alert('Геолокация не поддерживается.');
                     return;
                 }
 
                 navigator.geolocation.getCurrentPosition(
                     (pos) => this.startTracking(pos),
-                    (err) => alert('Ошибка доступа к геолокации. Включите GPS.'),
+                    (err) => alert('Включите доступ к GPS.'),
                     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
             }
@@ -779,26 +814,35 @@
 
                 this.showScreen('screen-tracking');
 
-                if (initialPos) {
-                    this.onLocationUpdate(initialPos);
-                }
+                if (initialPos) this.onLocationUpdate(initialPos);
 
                 this.timerInterval = setInterval(() => this.updateTimer(), 1000);
 
                 this.watchId = navigator.geolocation.watchPosition(
                     (pos) => this.onLocationUpdate(pos),
-                    (err) => console.warn('Ошибка GPS:', err),
-                    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+                    (err) => console.warn(err),
+                    { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
                 );
             }
 
-            /* ВАЖНО: Математическая фильтрация шума и прыжков GPS */
+            /* Алгоритм точной фильтрации */
             onLocationUpdate(pos) {
                 const accuracy = pos.coords.accuracy;
                 document.getElementById('live-accuracy').innerText = `±${Math.round(accuracy)}м`;
 
-                // 1. Отсеиваем точки с высокой погрешностью (выше 20 метров)
-                if (accuracy > 20) return;
+                // 1. Фильтр точности GPS
+                if (accuracy > this.cfg.sensors.gpsMaxAccuracyMeter) return;
+
+                // 2. Проверка движения акселерометром
+                const statusEl = document.getElementById('live-status');
+                if (this.cfg.sensors.useAccelerometer && !this.isMoving) {
+                    statusEl.innerText = 'Покой (Стол)';
+                    statusEl.style.color = 'var(--text-secondary)';
+                    return; // Блокируем запись, когда телефон неподвижно лежит
+                }
+
+                statusEl.innerText = 'Движение';
+                statusEl.style.color = '#4caf50';
 
                 const rawLat = pos.coords.latitude;
                 const rawLng = pos.coords.longitude;
@@ -811,14 +855,13 @@
                     return;
                 }
 
-                // 2. Расчет расстояния от предыдущей точки
+                // 3. Шаг физического смещения
                 const distFromLast = this.haversineDistance(this.lastFilteredPos, { lat: rawLat, lng: rawLng });
 
-                // 3. Порог движения: игнорируем мелкие колебания меньше 1.8м (махи руками, покачивания)
-                if (distFromLast < 1.8) return;
+                if (distFromLast < this.cfg.sensors.gpsMinDistanceMeter) return;
 
-                // 4. Фильтр экспоненциального сглаживания (Exponential Smoothing) для идеальной линии
-                const alpha = 0.45; 
+                // 4. Вычисление новой сглаженной позиции
+                const alpha = this.cfg.sensors.smoothAlpha;
                 const smoothLat = this.lastFilteredPos.lat + alpha * (rawLat - this.lastFilteredPos.lat);
                 const smoothLng = this.lastFilteredPos.lng + alpha * (rawLng - this.lastFilteredPos.lng);
 
@@ -850,11 +893,7 @@
                 }
 
                 requestAnimationFrame(() => {
-                    this.trackingMap.easeTo({
-                        center: lastCoord,
-                        zoom: 17.5,
-                        duration: 600
-                    });
+                    this.trackingMap.easeTo({ center: lastCoord, zoom: 17.5, duration: 400 });
                 });
             }
 
@@ -870,10 +909,6 @@
                 const distMeters = this.calculateDistance(this.currentTrack);
                 const distKm = (distMeters / 1000).toFixed(2);
                 document.getElementById('live-distance').innerText = `${distKm} км`;
-
-                const durationHours = (new Date() - this.startTime) / 1000 / 3600;
-                const avgSpeed = durationHours > 0 ? (distKm / durationHours).toFixed(1) : '0.0';
-                document.getElementById('live-speed').innerText = `${avgSpeed} км/ч`;
             }
 
             stopTracking() {
@@ -881,7 +916,6 @@
                 clearInterval(this.timerInterval);
 
                 if (this.currentTrack.length === 0) {
-                    alert('Недостаточно точек для сохранения.');
                     this.showScreen('screen-menu');
                     return;
                 }
@@ -911,7 +945,7 @@
                 container.innerHTML = '';
 
                 if (this.walks.length === 0) {
-                    container.innerHTML = '<div class="empty-state">Нет сохраненных прогулок</div>';
+                    container.innerHTML = '<div style="text-align:center; color:var(--text-secondary); margin-top:40px;">Нет сохраненных прогулок</div>';
                     return;
                 }
 
@@ -920,18 +954,13 @@
                     el.className = 'walk-item';
 
                     const start = new Date(walk.startTime);
-                    const end = new Date(walk.endTime);
-                    
-                    const dateStr = start.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                    const timeStartStr = start.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-                    const timeEndStr = end.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-
+                    const dateStr = start.toLocaleDateString('ru-RU');
                     const distStr = walk.distance >= 1000 
                         ? `${(walk.distance / 1000).toFixed(2)} км` 
                         : `${Math.round(walk.distance)} м`;
 
                     el.innerHTML = `
-                        <div class="walk-date">${dateStr} ${timeStartStr} - ${timeEndStr}</div>
+                        <div class="walk-date">${dateStr}</div>
                         <div class="walk-metrics">
                             <div class="metric-group">
                                 <span class="metric-label">Дистанция</span>
@@ -944,49 +973,9 @@
                         </div>
                     `;
 
-                    el.addEventListener('click', () => {
-                        if (!this.longPressTriggered) {
-                            this.openWalkOnMap(walk.id);
-                        }
-                    });
-
-                    const startPress = () => {
-                        this.longPressTriggered = false;
-                        this.longPressTimer = setTimeout(() => {
-                            this.longPressTriggered = true;
-                            this.openDeleteModal(walk.id);
-                        }, 700);
-                    };
-
-                    const cancelPress = () => clearTimeout(this.longPressTimer);
-
-                    el.addEventListener('touchstart', startPress, {passive: true});
-                    el.addEventListener('touchend', cancelPress);
-                    el.addEventListener('mousedown', startPress);
-                    el.addEventListener('mouseup', cancelPress);
-                    el.addEventListener('mouseleave', cancelPress);
-
+                    el.onclick = () => this.openWalkOnMap(walk.id);
                     container.appendChild(el);
                 });
-            }
-
-            openDeleteModal(id) {
-                this.itemToDeleteId = id;
-                document.getElementById('modal-delete').classList.add('active');
-            }
-
-            closeDeleteModal() {
-                this.itemToDeleteId = null;
-                document.getElementById('modal-delete').classList.remove('active');
-            }
-
-            confirmDelete() {
-                if (this.itemToDeleteId) {
-                    this.walks = this.walks.filter(w => w.id !== this.itemToDeleteId);
-                    this.saveWalks();
-                    this.renderHistory();
-                }
-                this.closeDeleteModal();
             }
 
             setMapLayer(layerType) {
@@ -997,9 +986,9 @@
                 this.applyLayerToMap(this.trackingMap, 'tracking-map-container', layerType, 'btn-tr-layer', 'live-route-layer', 'live-point-layer');
             }
 
-            /* Динамическая смена цвета линии трека под тип карты */
             applyLayerToMap(mapInstance, containerId, layerType, btnPrefix, routeLayerId, pointLayerId) {
                 if (!mapInstance) return;
+                this.activeLayer = layerType;
 
                 document.querySelectorAll(`[id^="${btnPrefix}-"]`).forEach(b => b.classList.remove('active'));
                 const targetBtn = document.getElementById(`${btnPrefix}-${layerType}`);
@@ -1016,14 +1005,15 @@
                     mapInstance.setLayoutProperty(`layer-${l}`, 'visibility', l === layerType ? 'visible' : 'none');
                 });
 
-                // Настройка контрастных цветов
-                const theme = this.themeColors[layerType];
+                const theme = this.cfg.ui.theme;
+                const palette = this.cfg.tracks.colors[theme][layerType];
+
                 if (mapInstance.getLayer(routeLayerId)) {
-                    mapInstance.setPaintProperty(routeLayerId, 'line-color', theme.line);
+                    mapInstance.setPaintProperty(routeLayerId, 'line-color', palette.line);
                 }
                 if (mapInstance.getLayer(pointLayerId)) {
-                    mapInstance.setPaintProperty(pointLayerId, 'circle-color', theme.point);
-                    mapInstance.setPaintProperty(pointLayerId, 'circle-stroke-color', theme.stroke);
+                    mapInstance.setPaintProperty(pointLayerId, 'circle-color', palette.point);
+                    mapInstance.setPaintProperty(pointLayerId, 'circle-stroke-color', palette.stroke);
                 }
             }
 
@@ -1032,16 +1022,13 @@
                 if (!this.selectedWalk || !this.selectedWalk.track.length) return;
 
                 this.showScreen('screen-map');
-                this.stopTimelapse();
 
                 const start = new Date(this.selectedWalk.startTime);
                 const end = new Date(this.selectedWalk.endTime);
                 const durationMin = Math.round((end - start) / 1000 / 60);
 
                 document.getElementById('map-date-label').innerText = start.toLocaleDateString('ru-RU');
-                document.getElementById('map-metrics-dist').innerText = this.selectedWalk.distance >= 1000 
-                    ? `${(this.selectedWalk.distance / 1000).toFixed(2)} км` 
-                    : `${Math.round(this.selectedWalk.distance)} м`;
+                document.getElementById('map-metrics-dist').innerText = `${(this.selectedWalk.distance / 1000).toFixed(2)} км`;
                 document.getElementById('map-metrics-speed').innerText = `${this.selectedWalk.avgSpeed} км/ч`;
                 document.getElementById('map-metrics-time').innerText = `${durationMin} мин`;
 
@@ -1050,13 +1037,8 @@
                 slider.value = this.selectedWalk.track.length - 1;
 
                 const coordinates = this.selectedWalk.track.map(p => [p.lng, p.lat]);
-                
-                if (coordinates.length === 1) {
-                    this.map.flyTo({ center: coordinates[0], zoom: 17 });
-                } else {
-                    const bounds = coordinates.reduce((b, coord) => b.extend(coord), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
-                    this.map.fitBounds(bounds, { padding: 50, animate: false });
-                }
+                const bounds = coordinates.reduce((b, coord) => b.extend(coord), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
+                this.map.fitBounds(bounds, { padding: 50, animate: false });
 
                 this.updateMapRoute(this.selectedWalk.track.length - 1);
             }
@@ -1070,78 +1052,16 @@
                 if (this.map.getSource('route-source')) {
                     this.map.getSource('route-source').setData({
                         type: 'Feature',
-                        geometry: { 
-                            type: coords.length > 1 ? 'LineString' : 'MultiPoint', 
-                            coordinates: coords.length > 1 ? coords : (coords.length === 1 ? [coords[0]] : []) 
-                        }
+                        geometry: { type: 'LineString', coordinates: coords }
                     });
                 }
 
                 if (coords.length > 0 && this.map.getSource('point-source')) {
-                    const currentPoint = coords[coords.length - 1];
                     this.map.getSource('point-source').setData({
                         type: 'Feature',
-                        geometry: { type: 'Point', coordinates: currentPoint }
+                        geometry: { type: 'Point', coordinates: coords[coords.length - 1] }
                     });
-
-                    const pointTime = new Date(slicedTrack[slicedTrack.length - 1].timestamp);
-                    document.getElementById('timeline-time').innerText = pointTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                 }
-            }
-
-            onTimelineInput(val) {
-                this.stopTimelapse();
-                this.updateMapRoute(val);
-            }
-
-            toggleTimelapse() {
-                if (this.isTimelapsePlaying) {
-                    this.stopTimelapse();
-                } else {
-                    this.startTimelapse();
-                }
-            }
-
-            startTimelapse() {
-                const slider = document.getElementById('timeline-slider');
-                if (parseInt(slider.value) >= parseInt(slider.max)) {
-                    slider.value = 0;
-                }
-
-                this.isTimelapsePlaying = true;
-                document.getElementById('icon-play').style.display = 'none';
-                document.getElementById('icon-pause').style.display = 'block';
-
-                this.lastFrameTime = performance.now();
-
-                const loop = (time) => {
-                    if (!this.isTimelapsePlaying) return;
-
-                    if (time - this.lastFrameTime > 80) {
-                        let curr = parseInt(slider.value);
-                        let max = parseInt(slider.max);
-
-                        if (curr < max) {
-                            slider.value = curr + 1;
-                            this.updateMapRoute(slider.value);
-                            this.lastFrameTime = time;
-                        } else {
-                            this.stopTimelapse();
-                            return;
-                        }
-                    }
-
-                    this.timelapseFrame = requestAnimationFrame(loop);
-                };
-
-                this.timelapseFrame = requestAnimationFrame(loop);
-            }
-
-            stopTimelapse() {
-                this.isTimelapsePlaying = false;
-                if (this.timelapseFrame) cancelAnimationFrame(this.timelapseFrame);
-                document.getElementById('icon-play').style.display = 'block';
-                document.getElementById('icon-pause').style.display = 'none';
             }
 
             calculateDistance(track) {
@@ -1152,21 +1072,13 @@
                 return total;
             }
 
-            haversineDistance(coords1, coords2) {
+            haversineDistance(c1, c2) {
                 const R = 6371000;
-                const dLat = this.toRad(coords2.lat - coords1.lat);
-                const dLon = this.toRad(coords2.lng - coords1.lng);
-                const lat1 = this.toRad(coords1.lat);
-                const lat2 = this.toRad(coords2.lat);
-
+                const dLat = (c2.lat - c1.lat) * Math.PI / 180;
+                const dLon = (c2.lng - c1.lng) * Math.PI / 180;
                 const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                        Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                return R * c;
-            }
-
-            toRad(value) {
-                return value * Math.PI / 180;
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(c1.lat * Math.PI / 180) * Math.cos(c2.lat * Math.PI / 180);
+                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             }
         }
 
