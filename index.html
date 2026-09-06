@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Path / Track</title>
+    <title>Path / Track Premium</title>
 
     <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
@@ -18,7 +18,7 @@
             --text-secondary: #a0a0a0;
             --danger-color: #e53935;
             --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --transition-speed: 0.25s;
+            --transition-speed: 0.2s;
         }
 
         * {
@@ -38,6 +38,7 @@
             user-select: none;
         }
 
+        /* Оптимизация для 60/120 FPS */
         .app-screen {
             position: absolute;
             top: 0;
@@ -48,7 +49,11 @@
             flex-direction: column;
             opacity: 0;
             visibility: hidden;
-            transition: opacity var(--transition-speed) ease, visibility var(--transition-speed) ease;
+            transform: scale(0.98);
+            transition: opacity var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1),
+                        transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1),
+                        visibility var(--transition-speed);
+            will-change: transform, opacity;
             z-index: 1;
             background-color: var(--bg-primary);
         }
@@ -56,6 +61,7 @@
         .app-screen.active {
             opacity: 1;
             visibility: visible;
+            transform: scale(1);
             z-index: 10;
         }
 
@@ -111,10 +117,12 @@
             align-items: center;
             justify-content: center;
             gap: 12px;
-            transition: background-color var(--transition-speed), color var(--transition-speed);
+            transition: background-color var(--transition-speed), transform 0.1s ease;
+            will-change: transform;
         }
 
         .btn-primary:active {
+            transform: scale(0.97);
             background-color: #cccccc;
         }
 
@@ -133,10 +141,12 @@
             align-items: center;
             justify-content: center;
             gap: 12px;
-            transition: border-color var(--transition-speed), background-color var(--transition-speed);
+            transition: border-color var(--transition-speed), background-color var(--transition-speed), transform 0.1s ease;
+            will-change: transform;
         }
 
         .btn-secondary:active {
+            transform: scale(0.97);
             background-color: var(--bg-tertiary);
             border-color: var(--text-secondary);
         }
@@ -189,10 +199,12 @@
             border: 1px solid var(--border-color);
             padding: 18px;
             cursor: pointer;
-            transition: border-color var(--transition-speed);
+            transition: border-color var(--transition-speed), transform 0.15s ease;
+            will-change: transform;
         }
 
         .walk-item:active {
+            transform: scale(0.98);
             border-color: var(--text-secondary);
         }
 
@@ -236,59 +248,76 @@
             margin-top: 40px;
         }
 
-        #screen-tracking {
-            justify-content: space-between;
-            align-items: center;
-            padding: 40px 24px;
+        /* Карта в реальном времени при трекинге */
+        #tracking-map-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
 
-        .tracking-status {
-            text-align: center;
+        .tracking-overlay-top {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .tracking-badge {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
         }
 
         .pulse-indicator {
-            width: 12px;
-            height: 12px;
-            background-color: var(--text-primary);
+            width: 10px;
+            height: 10px;
+            background-color: var(--danger-color);
             border-radius: 50%;
-            margin: 0 auto 16px auto;
-            animation: pulse 1.5s infinite ease-in-out;
+            animation: pulse 1.2s infinite ease-in-out;
         }
 
         @keyframes pulse {
-            0% { transform: scale(0.8); opacity: 0.3; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(0.8); opacity: 0.3; }
+            0% { transform: scale(0.8); opacity: 0.4; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.4; }
         }
 
         .tracking-timer {
-            font-size: 48px;
-            font-weight: 300;
-            letter-spacing: 2px;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 1px;
             font-variant-numeric: tabular-nums;
         }
 
-        .live-metrics {
-            width: 100%;
-            max-width: 320px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
+        .tracking-overlay-bottom {
+            position: absolute;
+            bottom: 24px;
+            left: 16px;
+            right: 16px;
+            z-index: 10;
             background-color: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            padding: 20px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        .points-count {
-            grid-column: span 2;
-            font-size: 11px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            text-align: center;
-            border-top: 1px solid var(--border-color);
-            padding-top: 8px;
-            margin-top: 4px;
+        .live-metrics {
+            display: flex;
+            justify-content: space-around;
         }
 
         #map-container {
@@ -317,7 +346,7 @@
 
         .map-controls-group {
             display: flex;
-            gap: 8px;
+            gap: 4px;
             background-color: var(--bg-secondary);
             border: 1px solid var(--border-color);
             padding: 4px;
@@ -408,6 +437,7 @@
             opacity: 0;
             visibility: hidden;
             transition: opacity var(--transition-speed);
+            will-change: opacity;
         }
 
         .modal-backdrop.active {
@@ -445,6 +475,7 @@
             margin-top: 8px;
         }
 
+        /* Ч/Б стиль карты OSM */
         .monochrome-map .maplibregl-canvas {
             filter: grayscale(100%) invert(90%) contrast(120%);
         }
@@ -481,29 +512,38 @@
     </section>
 
     <section id="screen-tracking" class="app-screen">
-        <div class="header-title" style="margin-top: 20px;">Запись Маршрута</div>
-        
-        <div class="tracking-status">
-            <div class="pulse-indicator"></div>
-            <div class="tracking-timer" id="tracking-timer">00:00:00</div>
+        <div id="tracking-map-container"></div>
+
+        <div class="tracking-overlay-top">
+            <div class="tracking-badge">
+                <div class="pulse-indicator"></div>
+                <div class="tracking-timer" id="tracking-timer">00:00:00</div>
+            </div>
+            <div class="map-controls-group">
+                <button class="layer-btn active" id="btn-tr-layer-osm" onclick="app.setTrackingMapLayer('osm')">Mono</button>
+                <button class="layer-btn" id="btn-tr-layer-topo" onclick="app.setTrackingMapLayer('topo')">Topo</button>
+                <button class="layer-btn" id="btn-tr-layer-sat" onclick="app.setTrackingMapLayer('sat')">Sat</button>
+            </div>
         </div>
 
-        <div class="live-metrics">
-            <div class="metric-group">
-                <span class="metric-label">Дистанция</span>
-                <span class="metric-value" id="live-distance">0.00 км</span>
+        <div class="tracking-overlay-bottom">
+            <div class="live-metrics">
+                <div class="metric-group">
+                    <span class="metric-label">Дистанция</span>
+                    <span class="metric-value" id="live-distance">0.00 км</span>
+                </div>
+                <div class="metric-group">
+                    <span class="metric-label">Ср. Скорость</span>
+                    <span class="metric-value" id="live-speed">0.0 км/ч</span>
+                </div>
+                <div class="metric-group">
+                    <span class="metric-label">Точек GPS</span>
+                    <span class="metric-value" id="live-points">0</span>
+                </div>
             </div>
-            <div class="metric-group">
-                <span class="metric-label">Ср. Скорость</span>
-                <span class="metric-value" id="live-speed">0.0 км/ч</span>
-            </div>
-            <div class="points-count" id="live-points">Точек записано: 0</div>
-        </div>
-
-        <div style="width: 100%; max-width: 320px;">
             <button class="btn-primary" style="border-color: var(--danger-color); background-color: var(--danger-color); color: #fff;" onclick="app.stopTracking()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"></rect></svg>
-                Завершить
+                Завершить Прогулку
             </button>
         </div>
     </section>
@@ -574,15 +614,17 @@
                 this.timerInterval = null;
                 
                 this.map = null;
+                this.trackingMap = null;
                 this.selectedWalk = null;
-                this.currentLayer = 'osm';
-                this.timelapseInterval = null;
+                
+                this.timelapseFrame = null;
                 this.isTimelapsePlaying = false;
+                this.lastFrameTime = 0;
                 
                 this.itemToDeleteId = null;
                 this.longPressTimer = null;
 
-                this.initMapLibre();
+                this.initMaps();
             }
 
             loadWalks() {
@@ -603,17 +645,135 @@
                     this.renderHistory();
                 } else if (screenId === 'screen-map') {
                     setTimeout(() => { if (this.map) this.map.resize(); }, 200);
+                } else if (screenId === 'screen-tracking') {
+                    setTimeout(() => { if (this.trackingMap) this.trackingMap.resize(); }, 200);
                 }
             }
 
-            // ПРИНУДИТЕЛЬНЫЙ ЗАПРОС ГЕОЛОКАЦИИ ПО КЛИКУ
+            // Источники карт Google без API + OpenStreetMap
+            getMapStyleSources() {
+                return {
+                    'osm-tiles': {
+                        type: 'raster',
+                        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                        tileSize: 256,
+                        attribution: '© OpenStreetMap'
+                    },
+                    'google-topo-tiles': {
+                        type: 'raster',
+                        tiles: ['https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}'],
+                        tileSize: 256,
+                        attribution: '© Google Maps'
+                    },
+                    'google-sat-tiles': {
+                        type: 'raster',
+                        tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'],
+                        tileSize: 256,
+                        attribution: '© Google Maps'
+                    }
+                };
+            }
+
+            getMapStyleLayers() {
+                return [
+                    { id: 'layer-sat', type: 'raster', source: 'google-sat-tiles', layout: { visibility: 'none' } },
+                    { id: 'layer-topo', type: 'raster', source: 'google-topo-tiles', layout: { visibility: 'none' } },
+                    { id: 'layer-osm', type: 'raster', source: 'osm-tiles', layout: { visibility: 'visible' } }
+                ];
+            }
+
+            initMaps() {
+                // 1. Карта просмотра маршрутов
+                this.map = new maplibregl.Map({
+                    container: 'map-container',
+                    style: {
+                        version: 8,
+                        sources: this.getMapStyleSources(),
+                        layers: this.getMapStyleLayers()
+                    },
+                    center: [30.5234, 50.4501],
+                    zoom: 12
+                });
+                document.getElementById('map-container').classList.add('monochrome-map');
+
+                this.map.on('load', () => {
+                    this.map.addSource('route-source', {
+                        type: 'geojson',
+                        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
+                    });
+                    this.map.addLayer({
+                        id: 'route-layer',
+                        type: 'line',
+                        source: 'route-source',
+                        layout: { 'line-join': 'round', 'line-cap': 'round' },
+                        paint: { 'line-color': '#ffffff', 'line-width': 4 }
+                    });
+                    this.map.addSource('point-source', {
+                        type: 'geojson',
+                        data: { type: 'Feature', geometry: { type: 'Point', coordinates: [0, 0] } }
+                    });
+                    this.map.addLayer({
+                        id: 'point-layer',
+                        type: 'circle',
+                        source: 'point-source',
+                        paint: {
+                            'circle-radius': 6,
+                            'circle-color': '#ffffff',
+                            'circle-stroke-width': 2,
+                            'circle-stroke-color': '#0a0a0a'
+                        }
+                    });
+                });
+
+                // 2. Карта для отслеживания в реальном времени
+                this.trackingMap = new maplibregl.Map({
+                    container: 'tracking-map-container',
+                    style: {
+                        version: 8,
+                        sources: this.getMapStyleSources(),
+                        layers: this.getMapStyleLayers()
+                    },
+                    center: [30.5234, 50.4501],
+                    zoom: 16
+                });
+                document.getElementById('tracking-map-container').classList.add('monochrome-map');
+
+                this.trackingMap.on('load', () => {
+                    this.trackingMap.addSource('live-route-source', {
+                        type: 'geojson',
+                        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
+                    });
+                    this.trackingMap.addLayer({
+                        id: 'live-route-layer',
+                        type: 'line',
+                        source: 'live-route-source',
+                        layout: { 'line-join': 'round', 'line-cap': 'round' },
+                        paint: { 'line-color': '#ffffff', 'line-width': 5 }
+                    });
+                    this.trackingMap.addSource('live-point-source', {
+                        type: 'geojson',
+                        data: { type: 'Feature', geometry: { type: 'Point', coordinates: [0, 0] } }
+                    });
+                    this.trackingMap.addLayer({
+                        id: 'live-point-layer',
+                        type: 'circle',
+                        source: 'live-point-source',
+                        paint: {
+                            'circle-radius': 8,
+                            'circle-color': '#ffffff',
+                            'circle-stroke-width': 3,
+                            'circle-stroke-color': '#e53935'
+                        }
+                    });
+                });
+            }
+
             requestAndStartTracking() {
                 if (!navigator.geolocation) {
-                    alert('Геолокация не поддерживается данным браузером.');
+                    alert('Геолокация не поддерживается вашим браузером.');
                     return;
                 }
 
-                // Вызываем getCurrentPosition прямо в обработчике нажатия для системного системного диалога
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
                         this.startTracking(pos);
@@ -621,11 +781,7 @@
                     (err) => {
                         let msg = 'Не удалось получить доступ к геолокации.';
                         if (err.code === err.PERMISSION_DENIED) {
-                            msg = 'Разрешение на доступ к геолокации отклонено. Включите геолокацию в настройках браузера.';
-                        } else if (err.code === err.POSITION_UNAVAILABLE) {
-                            msg = 'Информация о местоположении недоступна.';
-                        } else if (err.code === err.TIMEOUT) {
-                            msg = 'Превышено время ожидания ответа геолокации.';
+                            msg = 'Доступ к геолокации отклонен.';
                         }
                         alert(msg);
                     },
@@ -637,17 +793,17 @@
                 this.currentTrack = [];
                 this.startTime = new Date();
 
+                this.showScreen('screen-tracking');
+
                 if (initialPos) {
                     this.onLocationUpdate(initialPos);
                 }
 
-                this.showScreen('screen-tracking');
                 this.timerInterval = setInterval(() => this.updateTimer(), 1000);
 
-                // Запуск непрерывного отслеживания
                 this.watchId = navigator.geolocation.watchPosition(
                     (pos) => this.onLocationUpdate(pos),
-                    (err) => console.warn('Ошибка непрерывной геолокации:', err),
+                    (err) => console.warn('Ошибка геолокации:', err),
                     { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
                 );
             }
@@ -659,7 +815,6 @@
                     timestamp: new Date().getTime()
                 };
 
-                // Исключаем дубликаты по одинаковым координатам
                 const lastPoint = this.currentTrack[this.currentTrack.length - 1];
                 if (lastPoint && lastPoint.lat === point.lat && lastPoint.lng === point.lng) {
                     return;
@@ -667,6 +822,39 @@
 
                 this.currentTrack.push(point);
                 this.updateLiveMetrics();
+                this.updateLiveMap();
+            }
+
+            updateLiveMap() {
+                if (!this.trackingMap || this.currentTrack.length === 0) return;
+
+                const coords = this.currentTrack.map(p => [p.lng, p.lat]);
+                const lastCoord = coords[coords.length - 1];
+
+                // Обновляем линию трека
+                if (this.trackingMap.getSource('live-route-source')) {
+                    this.trackingMap.getSource('live-route-source').setData({
+                        type: 'Feature',
+                        geometry: { type: 'LineString', coordinates: coords }
+                    });
+                }
+
+                // Обновляем текущую позицию
+                if (this.trackingMap.getSource('live-point-source')) {
+                    this.trackingMap.getSource('live-point-source').setData({
+                        type: 'Feature',
+                        geometry: { type: 'Point', coordinates: lastCoord }
+                    });
+                }
+
+                // Плавное смещение карты за пользователем (60/120 FPS)
+                requestAnimationFrame(() => {
+                    this.trackingMap.easeTo({
+                        center: lastCoord,
+                        zoom: 17,
+                        duration: 800
+                    });
+                });
             }
 
             updateTimer() {
@@ -685,7 +873,7 @@
                 const durationHours = (new Date() - this.startTime) / 1000 / 3600;
                 const avgSpeed = durationHours > 0 ? (distKm / durationHours).toFixed(1) : '0.0';
                 document.getElementById('live-speed').innerText = `${avgSpeed} км/ч`;
-                document.getElementById('live-points').innerText = `Точек записано: ${this.currentTrack.length}`;
+                document.getElementById('live-points').innerText = `${this.currentTrack.length}`;
             }
 
             stopTracking() {
@@ -803,83 +991,22 @@
                 this.closeDeleteModal();
             }
 
-            initMapLibre() {
-                this.map = new maplibregl.Map({
-                    container: 'map-container',
-                    style: {
-                        version: 8,
-                        sources: {
-                            'osm-tiles': {
-                                type: 'raster',
-                                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                                tileSize: 256,
-                                attribution: '© OpenStreetMap'
-                            },
-                            'topo-tiles': {
-                                type: 'raster',
-                                tiles: ['https://a.tile.opentopomap.org/{z}/{x}/{y}.png'],
-                                tileSize: 256
-                            },
-                            'sat-tiles': {
-                                type: 'raster',
-                                tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-                                tileSize: 256
-                            }
-                        },
-                        layers: [
-                            { id: 'layer-sat', type: 'raster', source: 'sat-tiles', layout: { visibility: 'none' } },
-                            { id: 'layer-topo', type: 'raster', source: 'topo-tiles', layout: { visibility: 'none' } },
-                            { id: 'layer-osm', type: 'raster', source: 'osm-tiles', layout: { visibility: 'visible' } }
-                        ]
-                    },
-                    center: [30.5234, 50.4501],
-                    zoom: 12
-                });
-
-                document.getElementById('map-container').classList.add('monochrome-map');
-
-                this.map.on('load', () => {
-                    this.map.addSource('route-source', {
-                        type: 'geojson',
-                        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
-                    });
-
-                    this.map.addLayer({
-                        id: 'route-layer',
-                        type: 'line',
-                        source: 'route-source',
-                        layout: { 'line-join': 'round', 'line-cap': 'round' },
-                        paint: {
-                            'line-color': '#ffffff',
-                            'line-width': 4
-                        }
-                    });
-
-                    this.map.addSource('point-source', {
-                        type: 'geojson',
-                        data: { type: 'Feature', geometry: { type: 'Point', coordinates: [0, 0] } }
-                    });
-
-                    this.map.addLayer({
-                        id: 'point-layer',
-                        type: 'circle',
-                        source: 'point-source',
-                        paint: {
-                            'circle-radius': 6,
-                            'circle-color': '#ffffff',
-                            'circle-stroke-width': 2,
-                            'circle-stroke-color': '#0a0a0a'
-                        }
-                    });
-                });
+            setMapLayer(layerType) {
+                this.applyLayerToMap(this.map, 'map-container', layerType, 'btn-layer');
             }
 
-            setMapLayer(layerType) {
-                this.currentLayer = layerType;
-                document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
-                document.getElementById(`btn-layer-${layerType}`).classList.add('active');
+            setTrackingMapLayer(layerType) {
+                this.applyLayerToMap(this.trackingMap, 'tracking-map-container', layerType, 'btn-tr-layer');
+            }
 
-                const container = document.getElementById('map-container');
+            applyLayerToMap(mapInstance, containerId, layerType, btnPrefix) {
+                if (!mapInstance) return;
+
+                document.querySelectorAll(`[id^="${btnPrefix}-"]`).forEach(b => b.classList.remove('active'));
+                const targetBtn = document.getElementById(`${btnPrefix}-${layerType}`);
+                if (targetBtn) targetBtn.classList.add('active');
+
+                const container = document.getElementById(containerId);
                 if (layerType === 'osm') {
                     container.classList.add('monochrome-map');
                 } else {
@@ -887,7 +1014,7 @@
                 }
 
                 ['osm', 'topo', 'sat'].forEach(l => {
-                    this.map.setLayoutProperty(`layer-${l}`, 'visibility', l === layerType ? 'visible' : 'none');
+                    mapInstance.setLayoutProperty(`layer-${l}`, 'visibility', l === layerType ? 'visible' : 'none');
                 });
             }
 
@@ -916,7 +1043,7 @@
                 const coordinates = this.selectedWalk.track.map(p => [p.lng, p.lat]);
                 
                 if (coordinates.length === 1) {
-                    this.map.flyTo({ center: coordinates[0], zoom: 15 });
+                    this.map.flyTo({ center: coordinates[0], zoom: 16 });
                 } else {
                     const bounds = coordinates.reduce((b, coord) => b.extend(coord), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
                     this.map.fitBounds(bounds, { padding: 50, animate: false });
@@ -966,6 +1093,7 @@
                 }
             }
 
+            /* Анимация Таймлапса на 60 / 120 FPS через requestAnimationFrame */
             startTimelapse() {
                 const slider = document.getElementById('timeline-slider');
                 if (parseInt(slider.value) >= parseInt(slider.max)) {
@@ -976,22 +1104,35 @@
                 document.getElementById('icon-play').style.display = 'none';
                 document.getElementById('icon-pause').style.display = 'block';
 
-                this.timelapseInterval = setInterval(() => {
-                    let curr = parseInt(slider.value);
-                    let max = parseInt(slider.max);
+                this.lastFrameTime = performance.now();
 
-                    if (curr < max) {
-                        slider.value = curr + 1;
-                        this.updateMapRoute(slider.value);
-                    } else {
-                        this.stopTimelapse();
+                const loop = (time) => {
+                    if (!this.isTimelapsePlaying) return;
+
+                    // Обновляем кадр каждые 80мс независимо от частоты экрана
+                    if (time - this.lastFrameTime > 80) {
+                        let curr = parseInt(slider.value);
+                        let max = parseInt(slider.max);
+
+                        if (curr < max) {
+                            slider.value = curr + 1;
+                            this.updateMapRoute(slider.value);
+                            this.lastFrameTime = time;
+                        } else {
+                            this.stopTimelapse();
+                            return;
+                        }
                     }
-                }, 100);
+
+                    this.timelapseFrame = requestAnimationFrame(loop);
+                };
+
+                this.timelapseFrame = requestAnimationFrame(loop);
             }
 
             stopTimelapse() {
                 this.isTimelapsePlaying = false;
-                clearInterval(this.timelapseInterval);
+                if (this.timelapseFrame) cancelAnimationFrame(this.timelapseFrame);
                 document.getElementById('icon-play').style.display = 'block';
                 document.getElementById('icon-pause').style.display = 'none';
             }
