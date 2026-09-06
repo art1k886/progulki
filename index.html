@@ -8,7 +8,38 @@
     <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 
-    <script src="config.js"></script>
+    <script>
+        // ГЛОБАЛЬНЫЙ КОНФИГ (встроен прямо в HTML)
+        window.appConfig = {
+            sensors: {
+                useAccelerometer: true,
+                motionThreshold: 0.5,
+                gpsMinDistanceMeter: 0.2,
+                gpsMaxAccuracyMeter: 30,
+                smoothAlpha: 0.8
+            },
+            ui: {
+                theme: 'dark',
+                defaultLayer: 'osm'
+            },
+            tracks: {
+                lineWidth: 5,
+                lineOutlineWidth: 8,
+                colors: {
+                    dark: {
+                        osm: { line: '#ffffff', stroke: '#000000', point: '#ffffff' },
+                        topo: { line: '#ff3b30', stroke: '#ffffff', point: '#ff3b30' },
+                        sat: { line: '#00f0ff', stroke: '#000000', point: '#00f0ff' }
+                    },
+                    light: {
+                        osm: { line: '#000000', stroke: '#ffffff', point: '#000000' },
+                        topo: { line: '#d90429', stroke: '#ffffff', point: '#d90429' },
+                        sat: { line: '#0055ff', stroke: '#ffffff', point: '#0055ff' }
+                    }
+                }
+            }
+        };
+    </script>
 
     <style>
         :root {
@@ -19,12 +50,10 @@
             --text-primary: #f5f5f5;
             --text-secondary: #a0a0a0;
             --danger-color: #e53935;
-            --accent-color: #ffffff;
             --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             --transition-speed: 0.2s;
         }
 
-        /* Дневная тема */
         body.theme-light {
             --bg-primary: #f4f4f6;
             --bg-secondary: #ffffff;
@@ -32,7 +61,6 @@
             --border-color: #d1d1d6;
             --text-primary: #1c1c1e;
             --text-secondary: #8e8e93;
-            --accent-color: #000000;
         }
 
         * {
@@ -64,10 +92,7 @@
             opacity: 0;
             visibility: hidden;
             transform: scale(0.98);
-            transition: opacity var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1),
-                        transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1),
-                        visibility var(--transition-speed);
-            will-change: transform, opacity;
+            transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease, visibility var(--transition-speed);
             z-index: 1;
             background-color: var(--bg-primary);
         }
@@ -95,7 +120,6 @@
             font-weight: 600;
             letter-spacing: 1.5px;
             text-transform: uppercase;
-            color: var(--text-primary);
         }
 
         .btn-icon {
@@ -109,11 +133,6 @@
             align-items: center;
             justify-content: center;
             border-radius: 4px;
-            transition: background-color var(--transition-speed);
-        }
-
-        .btn-icon:hover {
-            background-color: var(--bg-tertiary);
         }
 
         .btn-primary {
@@ -131,13 +150,6 @@
             align-items: center;
             justify-content: center;
             gap: 12px;
-            transition: background-color var(--transition-speed), transform 0.1s ease;
-            will-change: transform;
-        }
-
-        .btn-primary:active {
-            transform: scale(0.97);
-            opacity: 0.8;
         }
 
         .btn-secondary {
@@ -155,13 +167,6 @@
             align-items: center;
             justify-content: center;
             gap: 12px;
-            transition: border-color var(--transition-speed), background-color var(--transition-speed), transform 0.1s ease;
-            will-change: transform;
-        }
-
-        .btn-secondary:active {
-            transform: scale(0.97);
-            background-color: var(--bg-tertiary);
         }
 
         #screen-menu {
@@ -198,14 +203,13 @@
             text-transform: uppercase;
         }
 
-        /* Настройки (Settings UI) */
         .settings-content {
             flex: 1;
             overflow-y: auto;
             padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: 20px;
         }
 
         .setting-group {
@@ -218,7 +222,7 @@
         }
 
         .setting-title {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -234,7 +238,6 @@
 
         .setting-label {
             font-size: 13px;
-            font-weight: 500;
         }
 
         .setting-select, .setting-input {
@@ -260,12 +263,6 @@
             border: 1px solid var(--border-color);
             padding: 18px;
             cursor: pointer;
-            transition: border-color var(--transition-speed), transform 0.15s ease;
-            will-change: transform;
-        }
-
-        .walk-item:active {
-            transform: scale(0.98);
         }
 
         .walk-date {
@@ -288,7 +285,6 @@
             font-size: 10px;
             color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
         .metric-value {
@@ -348,7 +344,6 @@
         .tracking-timer {
             font-size: 18px;
             font-weight: 600;
-            letter-spacing: 1px;
             font-variant-numeric: tabular-nums;
         }
 
@@ -386,10 +381,8 @@
             padding: 6px 12px;
             font-size: 11px;
             font-weight: 600;
-            letter-spacing: 1px;
             text-transform: uppercase;
             cursor: pointer;
-            transition: color var(--transition-speed), background-color var(--transition-speed);
         }
 
         .layer-btn.active {
@@ -423,13 +416,11 @@
             height: 16px;
             background: var(--text-primary);
             cursor: pointer;
-            border: none;
         }
 
         .time-display {
             font-size: 12px;
             font-weight: 500;
-            letter-spacing: 1px;
             font-variant-numeric: tabular-nums;
             width: 50px;
             text-align: right;
@@ -438,7 +429,7 @@
         .monochrome-map .maplibregl-canvas {
             filter: grayscale(100%) invert(90%) contrast(120%);
         }
-        
+
         body.theme-light .monochrome-map .maplibregl-canvas {
             filter: grayscale(100%) contrast(110%);
         }
@@ -452,15 +443,15 @@
             <div class="brand-subtitle">Гибридный Навигатор</div>
         </div>
         <div class="menu-container">
-            <button class="btn-primary" onclick="app.requestAndStartTracking()">
+            <button class="btn-primary" onclick="window.app.requestAndStartTracking()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                 Начать Прогулку
             </button>
-            <button class="btn-secondary" onclick="app.showScreen('screen-history')">
+            <button class="btn-secondary" onclick="window.app.showScreen('screen-history')">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                 История
             </button>
-            <button class="btn-secondary" onclick="app.showScreen('screen-settings')">
+            <button class="btn-secondary" onclick="window.app.showScreen('screen-settings')">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                 Настройки
             </button>
@@ -469,7 +460,7 @@
 
     <section id="screen-settings" class="app-screen">
         <div class="header">
-            <button class="btn-icon" onclick="app.showScreen('screen-menu')">
+            <button class="btn-icon" onclick="window.app.showScreen('screen-menu')">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
             <div class="header-title">Параметры</div>
@@ -480,7 +471,7 @@
                 <div class="setting-title">Интерфейс</div>
                 <div class="setting-row">
                     <span class="setting-label">Тема оформления</span>
-                    <select class="setting-select" id="setting-theme" onchange="app.changeTheme(this.value)">
+                    <select class="setting-select" id="setting-theme" onchange="window.app.changeTheme(this.value)">
                         <option value="dark">Темная (Ночь)</option>
                         <option value="light">Светлая (День)</option>
                     </select>
@@ -491,14 +482,14 @@
                 <div class="setting-title">Точность и Движение</div>
                 <div class="setting-row">
                     <span class="setting-label">Фильтр стола (Акселерометр)</span>
-                    <select class="setting-select" id="setting-accel" onchange="app.updateConfig('sensors.useAccelerometer', this.value === 'true')">
+                    <select class="setting-select" id="setting-accel" onchange="window.app.updateConfig('sensors.useAccelerometer', this.value === 'true')">
                         <option value="true">Включен (Блокирует дрейф)</option>
                         <option value="false">Выключен</option>
                     </select>
                 </div>
                 <div class="setting-row">
                     <span class="setting-label">Плавность треков (Alpha)</span>
-                    <select class="setting-select" id="setting-smooth" onchange="app.updateConfig('sensors.smoothAlpha', parseFloat(this.value))">
+                    <select class="setting-select" id="setting-smooth" onchange="window.app.updateConfig('sensors.smoothAlpha', parseFloat(this.value))">
                         <option value="1.0">Без сглаживания (1:1 Сырой GPS)</option>
                         <option value="0.8">Высокая чувствительность (0.8)</option>
                         <option value="0.4">Среднее сглаживание (0.4)</option>
@@ -506,7 +497,7 @@
                 </div>
                 <div class="setting-row">
                     <span class="setting-label">Мин. шаг записи (метры)</span>
-                    <input type="number" class="setting-input" id="setting-min-dist" step="0.1" value="0.2" style="width: 70px;" onchange="app.updateConfig('sensors.gpsMinDistanceMeter', parseFloat(this.value))">
+                    <input type="number" class="setting-input" id="setting-min-dist" step="0.1" value="0.2" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMinDistanceMeter', parseFloat(this.value))">
                 </div>
             </div>
         </div>
@@ -514,7 +505,7 @@
 
     <section id="screen-history" class="app-screen">
         <div class="header">
-            <button class="btn-icon" onclick="app.showScreen('screen-menu')">
+            <button class="btn-icon" onclick="window.app.showScreen('screen-menu')">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
             <div class="header-title">История Прогулок</div>
@@ -532,9 +523,9 @@
                 <div class="tracking-timer" id="tracking-timer">00:00:00</div>
             </div>
             <div class="map-controls-group">
-                <button class="layer-btn active" id="btn-tr-layer-osm" onclick="app.setTrackingMapLayer('osm')">Mono</button>
-                <button class="layer-btn" id="btn-tr-layer-topo" onclick="app.setTrackingMapLayer('topo')">Topo</button>
-                <button class="layer-btn" id="btn-tr-layer-sat" onclick="app.setTrackingMapLayer('sat')">Sat</button>
+                <button class="layer-btn active" id="btn-tr-layer-osm" onclick="window.app.setTrackingMapLayer('osm')">Mono</button>
+                <button class="layer-btn" id="btn-tr-layer-topo" onclick="window.app.setTrackingMapLayer('topo')">Topo</button>
+                <button class="layer-btn" id="btn-tr-layer-sat" onclick="window.app.setTrackingMapLayer('sat')">Sat</button>
             </div>
         </div>
 
@@ -553,7 +544,7 @@
                     <span class="metric-value" id="live-accuracy">±0м</span>
                 </div>
             </div>
-            <button class="btn-primary" style="border-color: var(--danger-color); background-color: var(--danger-color); color: #fff;" onclick="app.stopTracking()">
+            <button class="btn-primary" style="border-color: var(--danger-color); background-color: var(--danger-color); color: #fff;" onclick="window.app.stopTracking()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"></rect></svg>
                 Завершить
             </button>
@@ -564,13 +555,13 @@
         <div id="map-container"></div>
 
         <div class="overlay-top">
-            <button class="btn-icon" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);" onclick="app.showScreen('screen-history')">
+            <button class="btn-icon" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);" onclick="window.app.showScreen('screen-history')">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </button>
             <div class="map-controls-group">
-                <button class="layer-btn active" id="btn-layer-osm" onclick="app.setMapLayer('osm')">Mono</button>
-                <button class="layer-btn" id="btn-layer-topo" onclick="app.setMapLayer('topo')">Topo</button>
-                <button class="layer-btn" id="btn-layer-sat" onclick="app.setMapLayer('sat')">Sat</button>
+                <button class="layer-btn active" id="btn-layer-osm" onclick="window.app.setMapLayer('osm')">Mono</button>
+                <button class="layer-btn" id="btn-layer-topo" onclick="window.app.setMapLayer('topo')">Topo</button>
+                <button class="layer-btn" id="btn-layer-sat" onclick="window.app.setMapLayer('sat')">Sat</button>
             </div>
         </div>
 
@@ -591,12 +582,12 @@
             </div>
 
             <div class="timeline-controls">
-                <button class="btn-icon" id="btn-timelapse" onclick="app.toggleTimelapse()" style="border: 1px solid var(--border-color);">
+                <button class="btn-icon" id="btn-timelapse" onclick="window.app.toggleTimelapse()" style="border: 1px solid var(--border-color);">
                     <svg id="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                     <svg id="icon-pause" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
                 </button>
                 <div class="slider-container">
-                    <input type="range" id="timeline-slider" min="0" max="100" value="100" oninput="app.onTimelineInput(this.value)">
+                    <input type="range" id="timeline-slider" min="0" max="100" value="100" oninput="window.app.onTimelineInput(this.value)">
                 </div>
                 <div class="time-display" id="timeline-time">00:00</div>
             </div>
@@ -606,31 +597,35 @@
     <script>
         class RouteTrackerApp {
             constructor() {
-                this.cfg = window.appConfig || {};
+                this.cfg = window.appConfig;
                 this.storageKey = 'path_tracker_walks';
                 this.walks = this.loadWalks();
-                
+
                 this.watchId = null;
                 this.currentTrack = [];
                 this.startTime = null;
                 this.timerInterval = null;
-                
+
                 this.map = null;
                 this.trackingMap = null;
                 this.selectedWalk = null;
 
                 this.isMoving = false;
                 this.lastFilteredPos = null;
-                this.activeLayer = this.cfg.ui?.defaultLayer || 'osm';
+                this.activeLayer = this.cfg.ui.defaultLayer || 'osm';
 
                 this.initSensors();
                 this.initMaps();
-                this.applyTheme(this.cfg.ui?.theme || 'dark');
+                this.applyTheme(this.cfg.ui.theme || 'dark');
             }
 
             loadWalks() {
-                const data = localStorage.getItem(this.storageKey);
-                return data ? JSON.parse(data) : [];
+                try {
+                    const data = localStorage.getItem(this.storageKey);
+                    return data ? JSON.parse(data) : [];
+                } catch (e) {
+                    return [];
+                }
             }
 
             saveWalks() {
@@ -649,8 +644,9 @@
             applyTheme(theme) {
                 this.cfg.ui.theme = theme;
                 document.body.className = theme === 'light' ? 'theme-light' : '';
-                document.getElementById('setting-theme').value = theme;
-                
+                const themeSelect = document.getElementById('setting-theme');
+                if (themeSelect) themeSelect.value = theme;
+
                 if (this.map) this.applyLayerToMap(this.map, 'map-container', this.activeLayer, 'btn-layer', 'route-layer', 'point-layer');
                 if (this.trackingMap) this.applyLayerToMap(this.trackingMap, 'tracking-map-container', this.activeLayer, 'btn-tr-layer', 'live-route-layer', 'live-point-layer');
             }
@@ -659,7 +655,6 @@
                 this.applyTheme(val);
             }
 
-            /* Интеграция акселерометра для блокировки ложного GPS-дрейфа */
             initSensors() {
                 if (window.DeviceMotionEvent) {
                     window.addEventListener('devicemotion', (evt) => {
@@ -671,7 +666,6 @@
                         const acc = evt.acceleration;
                         if (acc && acc.x !== null) {
                             const magnitude = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
-                            // Если ускорение выше порога — телефон действительно двигают/машут
                             this.isMoving = magnitude > this.cfg.sensors.motionThreshold;
                         } else {
                             this.isMoving = true;
@@ -825,20 +819,17 @@
                 );
             }
 
-            /* Алгоритм точной фильтрации */
             onLocationUpdate(pos) {
                 const accuracy = pos.coords.accuracy;
                 document.getElementById('live-accuracy').innerText = `±${Math.round(accuracy)}м`;
 
-                // 1. Фильтр точности GPS
                 if (accuracy > this.cfg.sensors.gpsMaxAccuracyMeter) return;
 
-                // 2. Проверка движения акселерометром
                 const statusEl = document.getElementById('live-status');
                 if (this.cfg.sensors.useAccelerometer && !this.isMoving) {
                     statusEl.innerText = 'Покой (Стол)';
                     statusEl.style.color = 'var(--text-secondary)';
-                    return; // Блокируем запись, когда телефон неподвижно лежит
+                    return;
                 }
 
                 statusEl.innerText = 'Движение';
@@ -855,12 +846,10 @@
                     return;
                 }
 
-                // 3. Шаг физического смещения
                 const distFromLast = this.haversineDistance(this.lastFilteredPos, { lat: rawLat, lng: rawLng });
 
                 if (distFromLast < this.cfg.sensors.gpsMinDistanceMeter) return;
 
-                // 4. Вычисление новой сглаженной позиции
                 const alpha = this.cfg.sensors.smoothAlpha;
                 const smoothLat = this.lastFilteredPos.lat + alpha * (rawLat - this.lastFilteredPos.lat);
                 const smoothLng = this.lastFilteredPos.lng + alpha * (rawLng - this.lastFilteredPos.lng);
@@ -915,7 +904,8 @@
                 if (this.watchId) navigator.geolocation.clearWatch(this.watchId);
                 clearInterval(this.timerInterval);
 
-                if (this.currentTrack.length === 0) {
+                if (this.currentTrack.length < 2) {
+                    alert('Недостаточно данных для сохранения маршрута.');
                     this.showScreen('screen-menu');
                     return;
                 }
@@ -1002,7 +992,9 @@
                 }
 
                 ['osm', 'topo', 'sat'].forEach(l => {
-                    mapInstance.setLayoutProperty(`layer-${l}`, 'visibility', l === layerType ? 'visible' : 'none');
+                    if (mapInstance.getLayer(`layer-${l}`)) {
+                        mapInstance.setLayoutProperty(`layer-${l}`, 'visibility', l === layerType ? 'visible' : 'none');
+                    }
                 });
 
                 const theme = this.cfg.ui.theme;
@@ -1082,9 +1074,8 @@
             }
         }
 
-        let app;
         window.addEventListener('DOMContentLoaded', () => {
-            app = new RouteTrackerApp();
+            window.app = new RouteTrackerApp();
         });
     </script>
 </body>
