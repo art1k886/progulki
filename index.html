@@ -12,10 +12,9 @@
         window.appConfig = {
             sensors: {
                 useAccelerometer: false,
-                motionThreshold: 0.1,
-                gpsMinDistanceMeter: 0.1,
-                gpsMaxAccuracyMeter: 100,
-                smoothAlpha: 1.0
+                gpsMinDistanceMeter: 3.0,     // Игнорируем мелкие отскоки GPS на месте (< 3 метров)
+                gpsMaxAccuracyMeter: 20.0,    // Отбрасываем неточные точки (> 20 метров погрешности)
+                smoothAlpha: 0.25             // Коэффициент сглаживания (чем меньше, тем глаже линия)
             },
             ui: {
                 theme: 'dark',
@@ -144,11 +143,6 @@
             align-items: center;
             justify-content: center;
             border-radius: 4px;
-            transition: background-color 0.2s;
-        }
-
-        .btn-delete:hover {
-            background-color: rgba(229, 57, 53, 0.15);
         }
 
         .btn-primary {
@@ -505,23 +499,21 @@
             <div class="setting-group">
                 <div class="setting-title">Точность и Движение</div>
                 <div class="setting-row">
-                    <span class="setting-label">Фильтр акселерометра</span>
-                    <select class="setting-select" id="setting-accel" onchange="window.app.updateConfig('sensors.useAccelerometer', this.value === 'true')">
-                        <option value="false">Выключен (Рекомендуется)</option>
-                        <option value="true">Включен</option>
-                    </select>
-                </div>
-                <div class="setting-row">
                     <span class="setting-label">Плавность треков (Alpha)</span>
                     <select class="setting-select" id="setting-smooth" onchange="window.app.updateConfig('sensors.smoothAlpha', parseFloat(this.value))">
-                        <option value="1.0">Без сглаживания (1:1 GPS)</option>
-                        <option value="0.8">Высокая точность (0.8)</option>
-                        <option value="0.4">Сглаживание (0.4)</option>
+                        <option value="0.15">Максимальная гладкость (0.15)</option>
+                        <option value="0.25" selected>Оптимальное сглаживание (0.25)</option>
+                        <option value="0.5">Среднее сглаживание (0.5)</option>
+                        <option value="1.0">Без сглаживания (Сырой GPS)</option>
                     </select>
                 </div>
                 <div class="setting-row">
                     <span class="setting-label">Мин. шаг записи (метры)</span>
-                    <input type="number" class="setting-input" id="setting-min-dist" step="0.1" value="0.1" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMinDistanceMeter', parseFloat(this.value))">
+                    <input type="number" class="setting-input" id="setting-min-dist" step="0.5" value="3.0" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMinDistanceMeter', parseFloat(this.value))">
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">Макс. погрешность GPS (м)</span>
+                    <input type="number" class="setting-input" id="setting-max-acc" step="1" value="20" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMaxAccuracyMeter', parseFloat(this.value))">
                 </div>
             </div>
         </div>
@@ -630,11 +622,9 @@
                 this.trackingMap = null;
                 this.selectedWalk = null;
 
-                this.isMoving = true;
                 this.lastFilteredPos = null;
                 this.activeLayer = this.cfg.ui.defaultLayer || 'osm';
 
-                this.initSensors();
                 this.initMaps();
                 this.applyTheme(this.cfg.ui.theme || 'dark');
             }
@@ -686,26 +676,6 @@
 
             changeTheme(val) {
                 this.applyTheme(val);
-            }
-
-            initSensors() {
-                if (window.DeviceMotionEvent) {
-                    window.addEventListener('devicemotion', (evt) => {
-                        if (!this.cfg.sensors.useAccelerometer) {
-                            this.isMoving = true;
-                            return;
-                        }
-                        const acc = evt.acceleration;
-                        if (acc && acc.x !== null) {
-                            const magnitude = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
-                            this.isMoving = magnitude > this.cfg.sensors.motionThreshold;
-                        } else {
-                            this.isMoving = true;
-                        }
-                    });
-                } else {
-                    this.isMoving = true;
-                }
             }
 
             showScreen(screenId) {
@@ -826,7 +796,7 @@
 
                 navigator.geolocation.getCurrentPosition(
                     (pos) => this.startTracking(pos),
-                    (err) => alert('Разрешите доступ к геопозиции в настройках браузера или телефона.'),
+                    (err) => alert('Разрешите доступ к геолокации в настройках браузера.'),
                     { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
                 );
             }
@@ -855,6 +825,7 @@
 
                 const statusEl = document.getElementById('live-status');
 
+                // Игнорируем слишком неточные точки
                 if (accuracy > this.cfg.sensors.gpsMaxAccuracyMeter) {
                     statusEl.innerText = 'Слабый GPS';
                     statusEl.style.color = '#ff9800';
@@ -868,6 +839,7 @@
                 const rawLng = pos.coords.longitude;
                 const timestamp = new Date().getTime();
 
+                // Первая точка трека
                 if (!this.lastFilteredPos) {
                     this.lastFilteredPos = { lat: rawLat, lng: rawLng };
                     this.currentTrack.push({ lat: rawLat, lng: rawLng, timestamp });
@@ -875,10 +847,13 @@
                     return;
                 }
 
+                // Проверка расстояния от предыдущей зафиксированной точки
                 const distFromLast = this.haversineDistance(this.lastFilteredPos, { lat: rawLat, lng: rawLng });
 
+                // Игнорируем дрейф на месте
                 if (distFromLast < this.cfg.sensors.gpsMinDistanceMeter) return;
 
+                // Экспоненциальное сглаживание (EMA) для устранения резких углов
                 const alpha = this.cfg.sensors.smoothAlpha;
                 const smoothLat = this.lastFilteredPos.lat + alpha * (rawLat - this.lastFilteredPos.lat);
                 const smoothLng = this.lastFilteredPos.lng + alpha * (rawLng - this.lastFilteredPos.lng);
