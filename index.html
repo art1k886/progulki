@@ -12,9 +12,10 @@
         window.appConfig = {
             sensors: {
                 useAccelerometer: false,
-                gpsMinDistanceMeter: 1.5,
-                gpsMaxAccuracyMeter: 45.0,
-                smoothAlpha: 0.35
+                gpsMinDistanceMeter: 2.5, // Увеличено для отсечения мелких шумов
+                gpsMaxAccuracyMeter: 30.0,  // Ужесточено для исключения плохих точек
+                smoothAlpha: 0.35,
+                minSpeedThresholdMS: 0.22  // Мин. скорость (минимальный порог ~0.8 км/ч для фильтрации стоянки)
             },
             ui: {
                 theme: 'dark',
@@ -536,11 +537,11 @@
                 </div>
                 <div class="setting-row">
                     <span class="setting-label">Мин. шаг записи (метры)</span>
-                    <input type="number" class="setting-input" id="setting-min-dist" step="0.5" value="1.5" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMinDistanceMeter', parseFloat(this.value))">
+                    <input type="number" class="setting-input" id="setting-min-dist" step="0.5" value="2.5" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMinDistanceMeter', parseFloat(this.value))">
                 </div>
                 <div class="setting-row">
                     <span class="setting-label">Макс. погрешность GPS (м)</span>
-                    <input type="number" class="setting-input" id="setting-max-acc" step="1" value="45" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMaxAccuracyMeter', parseFloat(this.value))">
+                    <input type="number" class="setting-input" id="setting-max-acc" step="1" value="30" style="width: 70px;" onchange="window.app.updateConfig('sensors.gpsMaxAccuracyMeter', parseFloat(this.value))">
                 </div>
             </div>
         </div>
@@ -651,10 +652,28 @@
                 this.selectedWalk = null;
 
                 this.lastFilteredPos = null;
+                this.isTracking = false;
                 this.activeLayer = this.cfg.ui.defaultLayer || 'osm';
 
                 this.initMaps();
                 this.applyTheme(this.cfg.ui.theme || 'dark');
+                this.initVisibilityListener();
+            }
+
+            initVisibilityListener() {
+                // Обработка выхода из фонового режима для устранения прямых линий
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible' && this.isTracking) {
+                        navigator.geolocation.getCurrentPosition(
+                            (pos) => {
+                                // Сбрасываем сглаживание после задержки в фоне, чтобы не тянуть линию
+                                this.onLocationUpdate(pos, true);
+                            },
+                            (err) => console.warn(err),
+                            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                        );
+                    }
+                });
             }
 
             loadWalks() {
@@ -831,10 +850,11 @@
                 this.currentTrack = [];
                 this.lastFilteredPos = null;
                 this.startTime = new Date();
+                this.isTracking = true;
 
                 this.showScreen('screen-tracking');
 
-                if (initialPos) this.onLocationUpdate(initialPos);
+                if (initialPos) this.onLocationUpdate(initialPos, true);
 
                 this.timerInterval = setInterval(() => this.updateTimer(), 1000);
 
@@ -845,7 +865,7 @@
                 );
             }
 
-            onLocationUpdate(pos) {
+            onLocationUpdate(pos, isFirstOrResume = false) {
                 const accuracy = pos.coords.accuracy;
                 document.getElementById('live-accuracy').innerText = `±${Math.round(accuracy)}м`;
 
@@ -857,29 +877,49 @@
                     return;
                 }
 
-                statusEl.innerText = 'Запись...';
-                statusEl.style.color = '#4caf50';
-
                 const rawLat = pos.coords.latitude;
                 const rawLng = pos.coords.longitude;
-                const timestamp = new Date().getTime();
+                const timestamp = pos.timestamp || new Date().getTime();
 
-                if (!this.lastFilteredPos) {
-                    this.lastFilteredPos = { lat: rawLat, lng: rawLng };
+                if (!this.lastFilteredPos || isFirstOrResume) {
+                    this.lastFilteredPos = { lat: rawLat, lng: rawLng, timestamp };
                     this.currentTrack.push({ lat: rawLat, lng: rawLng, timestamp });
+                    statusEl.innerText = 'Запись...';
+                    statusEl.style.color = '#4caf50';
                     this.updateLiveMap();
                     return;
                 }
 
                 const distFromLast = this.haversineDistance(this.lastFilteredPos, { lat: rawLat, lng: rawLng });
+                const timeDiffSec = (timestamp - this.lastFilteredPos.timestamp) / 1000;
 
-                if (distFromLast < this.cfg.sensors.gpsMinDistanceMeter) return;
+                // 1. Исключение "дрейфа на месте":
+                // Игнорируем перемещения меньше минимального расстояния или если смещение сопоставимо с погрешностью
+                if (distFromLast < this.cfg.sensors.gpsMinDistanceMeter || distFromLast < (accuracy * 0.5)) {
+                    statusEl.innerText = 'Стоянка';
+                    statusEl.style.color = '#a0a0a0';
+                    return;
+                }
 
+                // Расчет скорости на участке
+                const calcSpeedMS = timeDiffSec > 0 ? (distFromLast / timeDiffSec) : (pos.coords.speed || 0);
+
+                // Фильтр скорости (игнорируем микро-сдвиги GPS во время стоянки)
+                if (calcSpeedMS < this.cfg.sensors.minSpeedThresholdMS) {
+                    statusEl.innerText = 'Стоянка';
+                    statusEl.style.color = '#a0a0a0';
+                    return;
+                }
+
+                statusEl.innerText = 'Запись...';
+                statusEl.style.color = '#4caf50';
+
+                // Сглаживание координат (Экспоненциальное сглаживание)
                 const alpha = this.cfg.sensors.smoothAlpha;
                 const smoothLat = this.lastFilteredPos.lat + alpha * (rawLat - this.lastFilteredPos.lat);
                 const smoothLng = this.lastFilteredPos.lng + alpha * (rawLng - this.lastFilteredPos.lng);
 
-                this.lastFilteredPos = { lat: smoothLat, lng: smoothLng };
+                this.lastFilteredPos = { lat: smoothLat, lng: smoothLng, timestamp };
                 this.currentTrack.push({ lat: smoothLat, lng: smoothLng, timestamp });
 
                 this.updateLiveMetrics();
@@ -921,6 +961,7 @@
             }
 
             stopTracking() {
+                this.isTracking = false;
                 if (this.watchId) navigator.geolocation.clearWatch(this.watchId);
                 clearInterval(this.timerInterval);
 
